@@ -1,0 +1,29 @@
+{
+  "name": "FloristEver - Jardim e Floricultura Acolhedora",
+  "short_name": "FloristEver",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FFF6E5",
+  "theme_color": "#A8D5A2",
+  "description": "Um jogo acolhedor de cultivo de flores, gestão de loja e criação de ramos artesanais.",
+  "icons": [
+    {
+      "src": "imagens/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "imagens/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "imagens/icons/icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

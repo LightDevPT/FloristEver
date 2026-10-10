@@ -1,0 +1,97 @@
+{
+  "economyVersion": 2,
+  "employmentVersion": 1,
+  "coins": 1280,
+  "reputation": 740,
+  "level": 6,
+  "stock": {
+    "daisy": 8,
+    "tulip": 12,
+    "sunflower": 5,
+    "rose": 2,
+    "orchid": 0
+  },
+  "basket": ["daisy", "rose"],
+  "upgrades": {
+    "cashier": 1,
+    "harvester": 1,
+    "basketCapacity": 2,
+    "speedBoots": 1,
+    "growthSpeed": 1,
+    "counterUpgrade": 1,
+    "shopDecor": 1,
+    "shopExpansion": 1,
+    "bouquetBench": 0
+  },
+  "employment": {
+    "active": { "cashier": true, "harvester": true },
+    "nextPayrollAt": null
+  },
+  "storeName": "FloristEver",
+  "settings": {
+    "sfxVolume": 0.7,
+    "musicVolume": 0.4,
+    "sfxMuted": false,
+    "musicMuted": false,
+    "dayNightCycle": true
+  },
+  "unlockedFlowers": {
+    "daisy": true,
+    "tulip": true,
+    "sunflower": true,
+    "rose": true,
+    "orchid": false
+  },
+  "discoveredBouquets": ["daisy+tulip", "rose+tulip"],
+  "orders": [
+    { "id": "apology_gift", "isCompleted": true },
+    { "id": "summer_wedding", "isCompleted": false },
+    { "id": "first_date", "isCompleted": false },
+    { "id": "royal_tribute", "isCompleted": false }
+  ],
+  "stats": {
+    "totalHarvested": 164,
+    "totalCoinsEarned": 5230,
+    "totalCoinsSpent": 3950,
+    "customersServed": 67,
+    "bouquetsCrafted": 5
+  },
+  "tutorial": { "currentStep": 8, "completed": true },
+  "plots": [
+    {
+      "id": 0,
+      "flowerId": "daisy",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 0,
+      "gridY": 0,
+      "flowers": [
+        { "progress": 0.9 },
+        { "progress": 0.7 },
+        { "progress": 0.5 },
+        { "progress": 0.3 },
+        { "progress": 0.1 },
+        { "progress": 0 }
+      ]
+    },
+    {
+      "id": 2,
+      "flowerId": "tulip",
+      "unlocked": true,
+      "optional": false,
+      "cost": 150,
+      "gridX": 1,
+      "gridY": 1,
+      "flowers": [
+        { "progress": 0.8 },
+        { "progress": 0.6 },
+        { "progress": 0.4 },
+        { "progress": 0.2 },
+        { "progress": 0.1 },
+        { "progress": 0 }
+      ]
+    }
+  ],
+  "lastSaveTime": 0
+}

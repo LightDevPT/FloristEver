@@ -1,0 +1,68 @@
+{
+  "name": "floristever",
+  "version": "1.0.8",
+  "description": "FloristEver - jogo cozy de floricultura para web, Android e Windows.",
+  "private": true,
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "node server.js",
+    "build:web": "node scripts/build-web.js",
+    "validate": "npm run build:web && npm run validate:content && node scripts/validate-build.js",
+    "validate:content": "node --experimental-default-type=module scripts/validate-content.mjs",
+    "test:game": "node --experimental-default-type=module --test tests/content-validation.test.mjs tests/save-migrations.test.mjs tests/customer-orders.test.mjs tests/assistant-skills.test.mjs tests/theme-system.test.mjs tests/audio.test.mjs tests/shop-expansion.test.mjs tests/hud-customizer.test.mjs tests/long-term-projects.test.mjs tests/herbarium-challenge-grace.test.mjs tests/objective-care.test.mjs tests/garden-content.test.mjs tests/garden-paths.test.mjs tests/local-test-mode.test.mjs tests/main-module-syntax.test.mjs tests/player-collision.test.mjs",
+    "standalone": "node build_standalone.js",
+    "electron:start": "npm run build:web && electron .",
+    "win:pack": "npm run validate && electron-builder --win portable",
+    "win:installer": "npm run validate && electron-builder --win nsis",
+    "android:add": "npm run build:web && cap add android",
+    "android:sync": "npm run validate && cap sync android",
+    "android:open": "npm run android:sync && cap open android",
+    "android:apk:debug": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "android:apk:release": "npm run android:sync && cd android && gradlew.bat assembleRelease",
+    "android:share:debug": "npm run android:apk:debug && node scripts/package-android-share.js debug",
+    "android:share:release": "npm run android:apk:release && node scripts/package-android-share.js release",
+    "android:share:existing": "node scripts/package-android-share.js debug",
+    "login:dev": "cd light-group-login && npm run dev",
+    "login:test": "cd light-group-login && npm test",
+    "security:audit": "npm audit --audit-level=moderate"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.4.3",
+    "@supabase/supabase-js": "^2.117.3",
+    "jsdom": "^29.1.1"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/cli": "^7.4.3",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.0.12",
+    "puppeteer-core": "^25.12.0"
+  },
+  "build": {
+    "appId": "com.lightgroup.floristever",
+    "productName": "FloristEver",
+    "icon": "imagens/icons/app-icon.ico",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "imagens/icons/app-icon.ico",
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

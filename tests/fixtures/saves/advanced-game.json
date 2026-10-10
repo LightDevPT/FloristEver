@@ -1,0 +1,102 @@
+{
+  "economyVersion": 2,
+  "employmentVersion": 1,
+  "coins": 18340,
+  "reputation": 19420,
+  "level": 12,
+  "stock": {
+    "daisy": 31,
+    "tulip": 16,
+    "sunflower": 25,
+    "rose": 18,
+    "orchid": 12
+  },
+  "basket": ["orchid", "rose", "sunflower"],
+  "upgrades": {
+    "cashier": 1,
+    "harvester": 5,
+    "basketCapacity": 10,
+    "speedBoots": 10,
+    "growthSpeed": 10,
+    "counterUpgrade": 5,
+    "shopDecor": 5,
+    "shopExpansion": 3,
+    "bouquetBench": 1
+  },
+  "employment": {
+    "active": { "cashier": true, "harvester": true },
+    "nextPayrollAt": 0
+  },
+  "storeName": "FloristEver",
+  "settings": {
+    "sfxVolume": 0.7,
+    "musicVolume": 0.4,
+    "sfxMuted": false,
+    "musicMuted": false,
+    "dayNightCycle": true
+  },
+  "unlockedFlowers": {
+    "daisy": true,
+    "tulip": true,
+    "sunflower": true,
+    "rose": true,
+    "orchid": true
+  },
+  "discoveredBouquets": [
+    "daisy+sunflower",
+    "orchid+rose+tulip",
+    "rose+tulip",
+    "sunflower+tulip"
+  ],
+  "orders": [
+    { "id": "apology_gift", "isCompleted": true },
+    { "id": "summer_wedding", "isCompleted": true },
+    { "id": "first_date", "isCompleted": true },
+    { "id": "royal_tribute", "isCompleted": true }
+  ],
+  "stats": {
+    "totalHarvested": 2450,
+    "totalCoinsEarned": 54100,
+    "totalCoinsSpent": 35760,
+    "customersServed": 604,
+    "bouquetsCrafted": 118
+  },
+  "tutorial": { "currentStep": 8, "completed": true },
+  "plots": [
+    {
+      "id": 0,
+      "flowerId": "daisy",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 0,
+      "gridY": 0,
+      "flowers": [
+        { "progress": 0.9 },
+        { "progress": 0.7 },
+        { "progress": 0.5 },
+        { "progress": 0.3 },
+        { "progress": 0.1 },
+        { "progress": 0 }
+      ]
+    },
+    {
+      "id": 2,
+      "flowerId": "orchid",
+      "unlocked": true,
+      "optional": false,
+      "cost": 8000,
+      "gridX": 2,
+      "gridY": 2,
+      "flowers": [
+        { "progress": 1 },
+        { "progress": 0.8 },
+        { "progress": 0.6 },
+        { "progress": 0.4 },
+        { "progress": 0.2 },
+        { "progress": 0 }
+      ]
+    }
+  ],
+  "lastSaveTime": 0
+}
