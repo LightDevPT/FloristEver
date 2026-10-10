@@ -20,7 +20,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  "connect-src 'self' https: http://localhost:4000 https://floristever.netlify.app",
   "media-src 'self' data: blob:",
   "manifest-src 'self'",
   "worker-src 'self'"
