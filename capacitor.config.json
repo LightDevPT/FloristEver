@@ -1,0 +1,9 @@
+{
+  "appId": "com.lightgroup.floristever",
+  "appName": "FloristEver",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

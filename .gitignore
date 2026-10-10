@@ -1,0 +1,12 @@
+node_modules/
+dist/
+release/
+android/
+.android-sdk/
+.cache/
+.jdk/
+*.log
+.env
+.env.*
+!.env.example
+!**/.env.example

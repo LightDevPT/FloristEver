@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>FloristEver - Jardim e Floricultura Acolhedora</title>
+  <meta name="description" content="FloristEver: Um jogo acolhedor de cultivo de flores, gestão de loja e criação de ramos artesanais.">
+  <meta name="theme-color" content="#A8D5A2">
+  <meta name="light-login-api-base" content="http://localhost:4000/api/v1">
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https: http://localhost:4000; media-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'"
+  >
+  <meta name="referrer" content="no-referrer">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="imagens/icons/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="imagens/icons/icon-180.png">
+
+  <!-- Google Fonts com fallback seguro -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Container Principal do Jogo -->
+  <div id="loading-screen" class="loading-screen" role="status" aria-live="polite" aria-busy="true">
+    <div class="loading-card cozy-card">
+      <img
+        id="loading-brand-logo"
+        class="loading-brand-logo"
+        src="imagens/icons/icon-512.png"
+        alt="FloristEver"
+        decoding="async"
+        fetchpriority="high"
+      >
+      <span id="loading-brand-fallback" class="loading-brand-fallback hidden" aria-hidden="true">LIGHT GROUP</span>
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p>Preparando o jardim...</p>
+      <span class="loading-powered-by">Powered by <strong>Light Group</strong></span>
+    </div>
+  </div>
+
+  <div id="game-container">
+    <!-- Canvas de Renderização 2D -->
+    <canvas id="game-canvas" role="img" aria-label="Campo de jogo FloristEver. Clica na gota junto ao nome de uma parcela para regar e acelerar o crescimento das flores nessa parcela."></canvas>
+
+    <!-- Overlay do HUD Superior -->
+    <header id="hud" class="hud-layer" aria-label="Painel de Estado">
+      <!-- Moedas / Dinheiro -->
+      <div class="hud-pill hud-coins" title="Saldo de moedas">
+        <span class="coin-icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="#F7C948" stroke="#2F5D4A" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="#FCE588" stroke="#2F5D4A" stroke-width="1.5"/><path d="M12 8.5V15.5M10 10.2C10 9.5 10.9 9 12 9C13.1 9 14 9.5 14 10.3C14 11.5 10 11.5 10 12.7C10 13.5 10.9 14 12 14C13.1 14 14 13.5 14 12.8" stroke="#2F5D4A" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+        <span id="hud-coin-amount" class="hud-value" aria-live="polite">0</span>
+      </div>
+
+      <!-- Reputação e Nível -->
+      <div class="hud-pill hud-level" title="Nível de Reputação da Floricultura" role="group" aria-label="Nível e reputação">
+        <div class="level-badge" id="hud-level-number" aria-live="polite">Nív. 1</div>
+        <div class="progress-bar-container" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar-fill" id="hud-rep-fill"></div>
+        </div>
+        <span id="hud-rep-text" class="rep-label" aria-live="polite">0 / 100 XP</span>
+      </div>
+
+      <!-- Cesto de Flores -->
+      <div class="hud-pill hud-basket" id="hud-basket-pill" title="Flores no cesto de colheita">
+        <span class="basket-icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 10L4 19C4 20.1 4.9 21 6 21H18C19.1 21 20 20.1 20 19L18 10H6Z" fill="#C99A6B" stroke="#2F5D4A" stroke-width="2" stroke-linejoin="round"/><path d="M5 10H19" stroke="#2F5D4A" stroke-width="2"/><path d="M8 10C8 6 9.8 4 12 4C14.2 4 16 6 16 10" stroke="#2F5D4A" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <span id="hud-basket-count" class="hud-value" aria-live="polite">0 / 10</span>
+      </div>
+
+      <!-- Botões de Ação Rápida / Menus -->
+      <div class="hud-actions">
+        <button
+          id="btn-toggle-hud-menu"
+          class="btn-hud hud-menu-toggle"
+          type="button"
+          aria-label="Abrir menu"
+          aria-expanded="false"
+          aria-controls="hud-menu-items"
+        >
+          <span class="hud-menu-toggle-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="hud-menu-toggle-label">Menu</span>
+        </button>
+        <div id="hud-menu-items" class="hud-menu-items">
+        <button id="btn-open-shop" class="btn-hud btn-bounce" title="Melhorias e Equipamento" aria-label="Melhorias e equipamento">
+          <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 4.5L19.5 9.5L10 19H5V14L14.5 4.5Z" fill="#FFFDF8" stroke="#2F5D4A" stroke-width="2" stroke-linejoin="round"/><path d="M13 6L18 11" stroke="#2F5D4A" stroke-width="1.5"/><path d="M6 13L11 18" stroke="#2F5D4A" stroke-width="1.5"/><circle cx="5" cy="5" r="2" fill="#E0577D"/></svg></span>
+          <span class="btn-label">Melhorias</span>
+        </button>
+        <button id="btn-open-challenges" class="btn-hud btn-bounce" type="button" title="Abrir missões e desafios" aria-label="Missões e desafios">
+          <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 3.5H17C18.1 3.5 19 4.4 19 5.5V20H5V5.5C5 4.4 5.9 3.5 7 3.5Z" fill="#FFFDF8" stroke="#2F5D4A" stroke-width="1.8"/><path d="M8 8L9.5 9.5L12 7M8 13L9.5 14.5L12 12M14 8H16M14 13H16" stroke="#5FA36B" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 3.5V2H15V3.5" stroke="#2F5D4A" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+          <span class="btn-label">Missões</span>
+        </button>
+        <button id="btn-open-optional-store" class="btn-hud btn-bounce" title="Loja de opções" aria-label="Abrir Loja">
+          <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 10L12 4L21 10V20H3V10Z" fill="#C99A6B" stroke="#2F5D4A" stroke-width="2" stroke-linejoin="round"/><path d="M9 20V13H15V20M2 10H5M19 10H22" stroke="#FFF6E5" stroke-width="2" stroke-linecap="round"/></svg></span>
+          <span class="btn-label">Loja</span>
+        </button>
+        <button id="btn-open-bouquet" class="btn-hud btn-bounce locked-feature" title="Bancada de Ramos (Desbloqueia no Nível 5)" aria-label="Bancada de Ramos">
+          <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 14L12 21L16 14H8Z" fill="#C99A6B" stroke="#2F5D4A" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="8" r="4" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.5"/><circle cx="7" cy="10" r="3.5" fill="#B7A3E3" stroke="#2F5D4A" stroke-width="1.5"/><circle cx="17" cy="10" r="3.5" fill="#F7C948" stroke="#2F5D4A" stroke-width="1.5"/><path d="M10 16L14 18M14 16L10 18" stroke="#E0577D" stroke-width="2"/></svg></span>
+          <span class="btn-label">Ramos</span>
+          <span class="lock-indicator" id="bouquet-lock-badge"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2" fill="#F7C948" stroke="#2F5D4A" stroke-width="2"/><path d="M8 10V6C8 3.8 9.8 2 12 2C14.2 2 16 3.8 16 6V10" stroke="#2F5D4A" stroke-width="2"/></svg><span>Nív. 5</span></span>
+        </button>
+        <button id="btn-open-book" class="btn-hud btn-bounce" title="Livro de Encomendas & Ramos" aria-label="Livro de encomendas">
+          <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5C4 3.9 4.9 3 6 3H20V19H6C4.9 19 4 18.1 4 17V5Z" fill="#5FA36B" stroke="#2F5D4A" stroke-width="2"/><path d="M4 17C4 15.9 4.9 15 6 15H20" stroke="#2F5D4A" stroke-width="2"/><path d="M11 3V9L13.5 7.5L16 9V3" fill="#E0577D"/></svg></span>
+          <span class="btn-label">Livro</span>
+        </button>
+        <button id="btn-toggle-map" class="btn-hud btn-bounce" type="button" title="Abrir mapa" aria-label="Abrir mapa" aria-expanded="false" aria-controls="map-panel">
+          <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6.5L8.5 4L15.5 6.5L21 4V17.5L15.5 20L8.5 17.5L3 20V6.5Z" fill="#A8D5A2" stroke="#2F5D4A" stroke-width="1.8" stroke-linejoin="round"/><path d="M8.5 4V17.5M15.5 6.5V20" stroke="#2F5D4A" stroke-width="1.6"/><circle cx="12" cy="11" r="2" fill="#E0577D" stroke="#FFFDF8" stroke-width="1"/></svg></span>
+          <span class="btn-label">Mapa</span>
+        </button>
+        <button id="btn-open-settings" class="btn-hud btn-bounce" title="Definições do Jogo" aria-label="Configurações do jogo">
+          <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19.4 13a7.8 7.8 0 0 0 0-2l2-1.5-2-3.5-2.4 1a7.8 7.8 0 0 0-1.7-1L15 3h-4l-.4 2.9a7.8 7.8 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7.8 7.8 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7.8 7.8 0 0 0 1.7 1L11 21h4l.4-2.9a7.8 7.8 0 0 0 1.7-1l2.4 1 2-3.5-2.1-1.6Z" fill="#F7C948" stroke="#2F5D4A" stroke-width="1.7" stroke-linejoin="round"/><circle cx="13" cy="12" r="3" fill="#FFF6E5" stroke="#2F5D4A" stroke-width="1.7"/></svg></span>
+        </button>
+        </div>
+      </div>
+      <div id="hud-world-status" class="world-status" aria-live="polite" aria-label="Estado do jardim">
+        <button id="theme-event-pill" class="world-status-item status-theme hidden" type="button" aria-label="Ver opções do tema de Halloween">
+          <span class="world-status-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3L14.2 8.3L20 8.8L15.6 12.5L17 18.2L12 15.1L7 18.2L8.4 12.5L4 8.8L9.8 8.3L12 3Z" fill="#F0BD63" stroke="#403844" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
+          <span data-theme-event-label>Jardim de Halloween</span>
+        </button>
+        <div id="status-ready-flowers" class="world-status-item status-ready hidden" role="status">
+          <span class="world-status-icon" aria-hidden="true"></span>
+          <span><strong id="status-ready-count">0</strong> <span id="status-ready-label">flores prontas</span></span>
+        </div>
+        <div id="status-waiting-customers" class="world-status-item status-waiting hidden" role="status">
+          <span class="world-status-icon" aria-hidden="true"></span>
+          <span><strong id="status-waiting-count">0</strong> <span id="status-waiting-label">clientes à espera</span></span>
+        </div>
+        <div id="status-missing-stock" class="world-status-item status-stock hidden" role="status">
+          <span class="world-status-icon" aria-hidden="true"></span>
+          <span>Falta stock para <strong id="status-stock-count">0</strong> <span id="status-stock-label">pedidos</span></span>
+        </div>
+      </div>
+      <div id="hud-favorite-objective" class="favorite-objective hidden" role="status" aria-live="polite">
+        <button id="hud-favorite-objective-open" class="favorite-objective-open" type="button">
+          <span class="favorite-objective-heading">Objetivo favorito</span>
+          <strong id="hud-favorite-objective-title"></strong>
+          <span id="hud-favorite-objective-next"></span>
+        </button>
+        <button
+          id="hud-favorite-objective-clear"
+          class="favorite-objective-clear"
+          type="button"
+          aria-label="Remover objetivo favorito"
+          title="Remover objetivo favorito"
+        >×</button>
+      </div>
+    </header>
+
+    <aside id="map-panel" class="map-panel hidden" aria-label="Mapa do jardim">
+      <div class="map-panel-header">
+        <span>Mapa das zonas</span>
+        <button id="btn-close-map" class="map-close" type="button" aria-label="Fechar mapa">×</button>
+      </div>
+      <canvas id="minimap-canvas" width="240" height="160" role="img" aria-label="Mapa interativo. Seleciona um local para caminhar até lá."></canvas>
+      <p>Seleciona um local para caminhar até lá.</p>
+      <div id="map-zone-destinations" class="map-zone-destinations" aria-label="Destinos desbloqueados"></div>
+    </aside>
+
+    <!-- Balão de Tutorial Não-Intrusivo -->
+    <aside id="tutorial-banner" class="tutorial-bubble hidden" aria-live="polite" aria-atomic="true">
+      <span class="tut-icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21V12" stroke="#2F5D4A" stroke-width="2" stroke-linecap="round"/><path d="M12 12C12 7.5 16 6 20 6C20 10 17 14 12 14" fill="#A8D5A2" stroke="#2F5D4A" stroke-width="2"/><path d="M12 15C12 12 9 10.5 5 11C5 14 8 16 12 16" fill="#5FA36B" stroke="#2F5D4A" stroke-width="1.8"/></svg></span>
+      <p id="tutorial-text">Bem-vindo ao FloristEver! Usa as teclas WASD ou setas para andar; no telemóvel, usa o joystick virtual para chegar ao campo de Margaridas.</p>
+      <button id="btn-dismiss-tutorial" class="tutorial-dismiss" type="button" aria-label="Adiar esta dica">Lembrar-me</button>
+    </aside>
+
+    <!-- Container de Notificações Toast -->
+    <div id="toast-container" class="toast-area" aria-live="assertive"></div>
+
+    <div id="update-app-banner" class="update-banner hidden" role="status" aria-live="polite">
+      <span>Atualização disponível</span>
+      <button id="btn-update-app" type="button" class="btn-primary btn-small">Atualizar app</button>
+    </div>
+    <div id="connection-status" class="connection-status hidden" role="status" aria-live="polite"></div>
+
+    <!-- Feedback Flutuante de Balcão e Ações -->
+    <div id="interaction-prompt" class="interaction-bubble hidden">
+      <span class="key-badge desktop-interaction-hint">E / Espaço</span>
+      <span class="key-badge mobile-interaction-hint">Clique em Agir</span>
+      <span id="interaction-label">Atender Cliente</span>
+    </div>
+
+    <!-- Controlos Touch para Dispositivos Móveis -->
+    <div id="mobile-controls" class="mobile-only">
+      <div id="virtual-joystick" class="joystick-zone">
+        <div id="joystick-knob" class="joystick-thumb"></div>
+      </div>
+      <button type="button" id="btn-mobile-action" class="btn-action-touch" title="Interagir" aria-label="Ação de interação">
+        <span aria-hidden="true">Agir</span>
+      </button>
+    </div>
+
+    <!-- Modais Flutuantes -->
+
+    <!-- 1. Modal da Loja de Upgrades -->
+    <div id="modal-shop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="shop-title">
+      <div class="modal-window cozy-card">
+        <div class="modal-header">
+          <h2 id="shop-title">Melhorias da Floricultura</h2>
+          <button type="button" class="btn-close-modal" data-close="modal-shop" aria-label="Fechar painel de melhorias"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px"><path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-intro">Investe os teus lucros para expandir o teu jardim e automatizar tarefas!</p>
+          <h3 class="shop-section-heading">Resumo financeiro</h3>
+          <p class="finance-note">Receitas e despesas acumuladas; o saldo inicial não conta como receita.</p>
+          <section id="shop-finance-summary" class="shop-finance-summary" aria-label="Resumo financeiro">
+            <div class="finance-card">
+              <span>Receitas totais</span>
+              <strong id="finance-income">0</strong>
+            </div>
+            <div class="finance-card">
+              <span>Despesas totais</span>
+              <strong id="finance-expenses">0</strong>
+            </div>
+            <div class="finance-card">
+              <span>Resultado líquido</span>
+              <strong id="finance-net">0</strong>
+            </div>
+            <div class="finance-card">
+              <span>Saldo disponível</span>
+              <strong id="finance-balance">0</strong>
+            </div>
+          </section>
+          <section id="shop-short-goals" class="shop-short-goals" aria-label="Metas de curto prazo">
+            <h3>Próximos objetivos</h3>
+            <div id="shop-goals-list" class="shop-goals-list"></div>
+          </section>
+          <section id="shop-employment" class="shop-employment" aria-label="Contratos de empregados">
+            <div class="shop-employment-heading">
+              <div>
+                <h3>Equipa e contratos</h3>
+                <p>Um dia de trabalho dura 6 minutos. O salário é cobrado no início de cada novo dia.</p>
+              </div>
+              <strong id="employment-total-wage">0 moedas/dia</strong>
+            </div>
+            <div id="employment-contract-list" class="employment-contract-list"></div>
+          </section>
+          <section class="shop-employment" aria-label="Habilidades de stock mínimo">
+            <div class="shop-employment-heading">
+              <div>
+                <h3>Reservas de stock por flor</h3>
+                <p>Compra cada habilidade para definir uma reserva; os ajudantes dão prioridade às flores abaixo do mínimo.</p>
+              </div>
+            </div>
+            <div id="stock-minimum-skills" class="employment-contract-list"></div>
+          </section>
+          <section class="shop-employment" aria-label="Especializações do florista de ramos">
+            <div class="shop-employment-heading">
+              <div>
+                <h3>Especializações de ramos</h3>
+                <p>Contrata primeiro um florista de ramos; depois escolhe as categorias a privilegiar.</p>
+              </div>
+            </div>
+            <div id="bouquet-specializations" class="employment-contract-list"></div>
+          </section>
+          <div class="shop-grid" id="upgrades-list">
+            <!-- Gerado dinamicamente por js/ui/shop.js -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-challenges" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="challenges-title">
+      <div class="modal-window cozy-card challenges-window">
+        <div class="modal-header">
+          <h2 id="challenges-title">Missões da Floricultura</h2>
+          <button type="button" class="btn-close-modal" data-close="modal-challenges" aria-label="Fechar missões"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px"><path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-intro">Completa objetivos diários e semanais, depois reclama as recompensas antes de as missões renovarem.</p>
+          <section class="long-term-projects" aria-labelledby="long-term-projects-title">
+            <h3 id="long-term-projects-title">Projetos de longo prazo</h3>
+            <p class="finance-note">O progresso fica guardado entre sessões e nunca expira.</p>
+            <div id="long-term-projects-list" class="long-term-projects-list"></div>
+          </section>
+          <section class="long-term-projects zone-activities" aria-labelledby="zone-activities-title">
+            <h3 id="zone-activities-title">Pequenas descobertas das zonas</h3>
+            <p class="finance-note">Explora as zonas desbloqueadas e encontra as recordações escondidas. São colecionáveis visuais, sem prémios de moedas.</p>
+            <div id="zone-activities-list" class="zone-activities-list"></div>
+          </section>
+          <div id="shop-challenges-list" class="shop-challenges-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-optional-store" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="optional-store-title">
+      <div class="modal-window cozy-card">
+        <div class="modal-header">
+          <h2 id="optional-store-title">Loja</h2>
+          <button type="button" class="btn-close-modal" data-close="modal-optional-store" aria-label="Fechar Loja"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px"><path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-intro">Escolhe em que queres investir. Estas compras são opcionais e não bloqueiam a progressão do jardim.</p>
+          <section class="optional-store-section" aria-labelledby="optional-plots-title">
+            <div class="optional-store-heading">
+              <div>
+                <h3 id="optional-plots-title" class="shop-section-heading">Terrenos extra</h3>
+                <p class="finance-note">Compra mais espaço para cultivar as flores que já conheces.</p>
+              </div>
+              <strong id="optional-store-balance" class="optional-store-balance"></strong>
+            </div>
+            <div id="optional-store-products" class="shop-grid optional-store-grid" aria-live="polite"></div>
+          </section>
+          <p class="optional-store-coming-soon">Mais opções opcionais poderão ser adicionadas à Loja no futuro.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Modal da Bancada de Ramos (Fase Avançada) -->
+    <div id="modal-bouquet" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="bouquet-title">
+      <div class="modal-window cozy-card modal-large">
+        <div class="modal-header">
+          <h2 id="bouquet-title">Bancada de Arranjos Florais</h2>
+          <button type="button" class="btn-close-modal" data-close="modal-bouquet" aria-label="Fechar bancada de arranjos"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px"><path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="modal-body bouquet-workbench-layout">
+          <!-- Coluna 1: Flores Disponíveis no Stock -->
+          <div class="bench-panel stock-panel">
+            <h3>Flores na Loja</h3>
+            <p class="panel-hint">Clica para adicionar ao ramo (até 5 flores):</p>
+            <div id="bouquet-stock-list" class="stock-cards-grid">
+              <!-- Preenchido via bouquet.js -->
+            </div>
+          </div>
+
+          <!-- Coluna 2: Composição do Ramo -->
+          <div class="bench-panel craft-panel">
+            <h3>Composição do Ramo</h3>
+            <div id="bouquet-preview-display" class="bouquet-canvas-preview">
+              <!-- Visualização artística do ramo montado -->
+            </div>
+            <div id="bouquet-slots" class="bouquet-slots-row">
+              <!-- Slots onde ficam as flores escolhidas -->
+            </div>
+
+            <!-- Opções de Embrulho & Acessórios -->
+            <div class="craft-options-group">
+              <label>Papel de Embrulho:</label>
+              <div id="wrap-selector" class="option-pill-group">
+                <!-- Opções de embrulho -->
+              </div>
+            </div>
+
+            <div class="craft-options-group">
+              <label>Acessório / Cartão:</label>
+              <div id="accessory-selector" class="option-pill-group">
+                <!-- Opções de fita/cartão/glitter -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Coluna 3: Análise de Harmonia & Valor -->
+          <div class="bench-panel summary-panel">
+            <h3>Avaliação Floral</h3>
+            <div class="harmony-box" id="harmony-breakdown">
+              <div class="harmony-badge" id="harmony-title">Ramo Simples</div>
+              <p id="harmony-desc">Adiciona mais flores para descobrir combinações aromáticas e poéticas.</p>
+              <ul class="bonus-details" id="harmony-bonuses"></ul>
+            </div>
+
+            <div class="total-price-box">
+              <span>Valor de Venda Estimado:</span>
+              <div class="big-coin-price">
+                <span class="coin-icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="#F7C948" stroke="#2F5D4A" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="#FCE588" stroke="#2F5D4A" stroke-width="1.5"/><path d="M12 8.5V15.5M10 10.2C10 9.5 10.9 9 12 9C13.1 9 14 9.5 14 10.3C14 11.5 10 11.5 10 12.7C10 13.5 10.9 14 12 14C13.1 14 14 13.5 14 12.8" stroke="#2F5D4A" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+                <span id="bouquet-computed-price">0</span>
+              </div>
+            </div>
+
+            <section id="active-order-guidance" class="active-order-guidance hidden" aria-live="polite"></section>
+            <button id="btn-craft-bouquet" class="btn-primary btn-large btn-bounce" disabled>
+              Criar Ramo Perfeito
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Modal do Livro de Ramos & Encomendas -->
+    <div id="modal-book" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="book-title">
+      <div class="modal-window cozy-card botanical-book-window">
+        <div class="modal-header">
+          <h2 id="book-title"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M4 5C4 3.9 4.9 3 6 3H20V19H6C4.9 19 4 18.1 4 17V5Z" fill="#5FA36B" stroke="#2F5D4A" stroke-width="2"/><path d="M4 17C4 15.9 4.9 15 6 15H20" stroke="#2F5D4A" stroke-width="2"/><path d="M11 3V9L13.5 7.5L16 9V3" fill="#E0577D"/></svg> Livro de Botânica & Encomendas</h2>
+          <button class="btn-close-modal" data-close="modal-book" aria-label="Fechar">✕</button>
+        </div>
+        <div class="modal-body botanical-book-body">
+          <div class="book-spread">
+            <aside class="book-index-page">
+              <span class="book-cover-corner book-cover-corner-top" aria-hidden="true"></span>
+              <span class="book-cover-corner book-cover-corner-bottom" aria-hidden="true"></span>
+              <span class="book-edition-mark">CADERNO DE CAMPO · Nº 01</span>
+              <div class="book-flower-seal" aria-hidden="true">
+                <svg viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M36 61V36M36 48C27 45 22 38 23 30C31 30 37 35 36 48ZM36 43C37 34 44 28 53 28C53 37 47 44 36 47Z" fill="#5FA36B" stroke="#2F5D4A" stroke-width="2.5" stroke-linejoin="round"/>
+                  <circle cx="36" cy="21" r="7" fill="#F7C948" stroke="#2F5D4A" stroke-width="2"/>
+                  <circle cx="36" cy="10" r="5" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.5"/>
+                  <circle cx="46" cy="19" r="5" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.5"/>
+                  <circle cx="42" cy="30" r="5" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.5"/>
+                  <circle cx="30" cy="30" r="5" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.5"/>
+                  <circle cx="26" cy="19" r="5" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.5"/>
+                </svg>
+              </div>
+              <h3>Memórias do jardim</h3>
+              <p class="book-index-intro">Encomendas especiais e combinações florais descobertas na tua floricultura.</p>
+              <nav class="book-index" aria-label="Índice do livro">
+                <button class="book-index-link active" type="button" data-tab="tab-orders" aria-current="page">
+                  <span>01</span><span>Encomendas</span><span class="book-index-dots"></span>
+                </button>
+                <button class="book-index-link" type="button" data-tab="tab-collection">
+                  <span>02</span><span>Herbário de ramos</span><span class="book-index-dots"></span>
+                </button>
+              </nav>
+              <p class="book-index-note">Cada ramo novo deixa uma lembrança nestas páginas.</p>
+            </aside>
+            <section class="book-page-wrap" aria-label="Página do livro">
+              <div class="book-page book-page-turned" id="book-page">
+                <svg class="book-page-floral book-page-floral-top" viewBox="0 0 150 190" fill="none" aria-hidden="true">
+                  <path d="M137 8C115 39 124 68 98 91C77 110 56 112 37 145M117 37C101 28 88 31 81 46C98 50 109 47 117 37ZM102 68C84 56 70 61 66 77C83 81 95 78 102 68ZM79 96C63 84 49 88 45 104C61 109 72 106 79 96ZM57 124C41 114 28 119 25 135C40 139 51 135 57 124ZM123 50C139 40 151 44 153 59C139 64 128 60 123 50ZM91 82C108 72 120 77 121 92C107 96 97 92 91 82Z" fill="#6E9A67" stroke="#567D54" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M38 145C31 157 28 168 28 182" stroke="#567D54" stroke-width="3" stroke-linecap="round"/>
+                  <circle cx="132" cy="28" r="8" fill="#F4A6B8" stroke="#B97878" stroke-width="1.5"/>
+                  <circle cx="137" cy="18" r="6" fill="#F7C948" stroke="#B97878" stroke-width="1.5"/>
+                  <circle cx="145" cy="28" r="6" fill="#F4A6B8" stroke="#B97878" stroke-width="1.5"/>
+                  <circle cx="139" cy="37" r="6" fill="#F4A6B8" stroke="#B97878" stroke-width="1.5"/>
+                  <circle cx="128" cy="36" r="6" fill="#F4A6B8" stroke="#B97878" stroke-width="1.5"/>
+                  <circle cx="126" cy="23" r="6" fill="#F4A6B8" stroke="#B97878" stroke-width="1.5"/>
+                </svg>
+                <svg class="book-page-floral book-page-floral-bottom" viewBox="0 0 150 190" fill="none" aria-hidden="true">
+                  <path d="M9 181C31 150 22 121 48 98C69 79 90 77 109 44M29 152C45 161 58 158 65 143C48 139 37 142 29 152ZM44 121C62 133 76 128 80 112C63 108 51 111 44 121ZM67 93C83 105 97 101 101 85C85 80 74 84 67 93ZM89 65C105 75 118 70 121 54C106 50 95 55 89 65ZM23 139C7 149-5 145-7 130C7 125 18 129 23 139ZM55 107C38 117 26 112 25 97C39 93 49 97 55 107Z" fill="#6E9A67" stroke="#567D54" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M109 44C116 32 119 21 119 7" stroke="#567D54" stroke-width="3" stroke-linecap="round"/>
+                  <circle cx="16" cy="161" r="8" fill="#B7A3E3" stroke="#8977A6" stroke-width="1.5"/>
+                  <circle cx="8" cy="153" r="6" fill="#F4A6B8" stroke="#8977A6" stroke-width="1.5"/>
+                  <circle cx="20" cy="150" r="6" fill="#F4A6B8" stroke="#8977A6" stroke-width="1.5"/>
+                  <circle cx="25" cy="163" r="6" fill="#F4A6B8" stroke="#8977A6" stroke-width="1.5"/>
+                  <circle cx="15" cy="171" r="6" fill="#F4A6B8" stroke="#8977A6" stroke-width="1.5"/>
+                  <circle cx="5" cy="165" r="6" fill="#F4A6B8" stroke="#8977A6" stroke-width="1.5"/>
+                </svg>
+                <header class="book-page-heading">
+                  <span id="book-page-kicker">CAPÍTULO I</span>
+                  <span class="book-page-rule" aria-hidden="true"></span>
+                  <span id="book-page-counter">01 / 02</span>
+                </header>
+                <div class="tab-pane active" id="tab-orders">
+                  <div class="book-page-title-row">
+                    <span class="book-chapter-seal" aria-hidden="true">
+                      <svg viewBox="0 0 36 36" fill="none">
+                        <path d="M18 31V19M18 25C13 23 10 19 11 14C16 14 19 17 18 25ZM18 22C19 17 23 14 28 14C28 19 24 23 18 25Z" fill="#5FA36B" stroke="#2F5D4A" stroke-width="1.4"/>
+                        <circle cx="18" cy="10" r="4" fill="#F7C948" stroke="#2F5D4A" stroke-width="1.2"/>
+                        <circle cx="18" cy="4" r="2.5" fill="#F4A6B8"/><circle cx="24" cy="9" r="2.5" fill="#F4A6B8"/><circle cx="21" cy="15" r="2.5" fill="#F4A6B8"/><circle cx="15" cy="15" r="2.5" fill="#F4A6B8"/><circle cx="12" cy="9" r="2.5" fill="#F4A6B8"/>
+                      </svg>
+                    </span>
+                    <div>
+                      <span class="book-page-eyebrow">PEDIDOS QUE CONTAM HISTÓRIAS</span>
+                      <h3 class="book-page-title">Encomendas especiais</h3>
+                    </div>
+                  </div>
+                  <p class="book-page-subtitle">Encomendas recorrentes que renovam a cada florada.</p>
+                  <section class="order-cycle-progress" aria-label="Progresso da florada atual">
+                    <div class="order-cycle-heading">
+                      <strong id="order-cycle-title">Florada 1</strong>
+                      <span id="order-cycle-description">0 de 4 encomendas concluídas</span>
+                    </div>
+                    <div id="order-cycle-progress" class="order-cycle-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 de 4 encomendas">
+                      <span></span>
+                    </div>
+                  </section>
+                  <div id="orders-list" class="orders-list">
+                    <!-- Gerado por bouquet.js -->
+                  </div>
+                </div>
+                <div class="tab-pane" id="tab-collection" aria-hidden="true">
+                  <div class="book-page-title-row">
+                    <span class="book-chapter-seal" aria-hidden="true">
+                      <svg viewBox="0 0 36 36" fill="none">
+                        <path d="M18 31V8M18 24C10 22 8 17 9 12C15 12 19 16 18 24ZM18 19C19 12 24 8 30 9C29 16 25 20 18 21ZM18 27C24 25 27 21 27 17C22 17 18 21 18 27Z" fill="#6E9A67" stroke="#2F5D4A" stroke-width="1.4"/>
+                        <circle cx="18" cy="7" r="3.5" fill="#F7C948" stroke="#2F5D4A" stroke-width="1.2"/>
+                        <circle cx="18" cy="2.5" r="2" fill="#F4A6B8"/><circle cx="22.5" cy="6" r="2" fill="#F4A6B8"/><circle cx="21" cy="11" r="2" fill="#F4A6B8"/><circle cx="15" cy="11" r="2" fill="#F4A6B8"/><circle cx="13.5" cy="6" r="2" fill="#F4A6B8"/>
+                      </svg>
+                    </span>
+                    <div>
+                      <span class="book-page-eyebrow">ESPÉCIMES CATALOGADOS</span>
+                      <h3 class="book-page-title">Herbário de ramos</h3>
+                    </div>
+                  </div>
+                  <p class="book-page-subtitle">Conhece as espécies do jardim e consulta os ramos que catalogaste.</p>
+                  <p id="flower-collection-summary" class="collection-progress"></p>
+                  <div id="flower-collection-grid" class="recipes-grid flower-collection-grid" aria-label="Catálogo de flores"></div>
+                  <section class="herbarium-exhibitions" aria-labelledby="herbarium-exhibitions-title">
+                    <h4 id="herbarium-exhibitions-title" class="book-collection-heading">Coleções e exposições permanentes</h4>
+                    <p class="herbarium-exhibitions-intro">Colhe as espécies pedidas e cataloga o ramo da coleção para montar uma exposição visual na loja.</p>
+                    <div id="herbarium-exhibitions-list" class="herbarium-exhibitions-list"></div>
+                  </section>
+                    <section class="special-visitors" aria-labelledby="special-visitors-title">
+                      <h4 id="special-visitors-title" class="book-collection-heading">Visitantes da floricultura</h4>
+                      <p id="special-visitors-summary" class="herbarium-exhibitions-intro"></p>
+                      <div id="special-visitors-list" class="special-visitors-list"></div>
+                    </section>
+                    <h4 class="book-collection-heading">Ramos catalogados</h4>
+                  <div id="recipes-collection-grid" class="recipes-grid">
+                    <!-- Coleção de combinações descobertas -->
+                  </div>
+                </div>
+                <footer class="book-page-footer">
+                  <button class="book-turn-button" id="book-prev-page" type="button" aria-label="Voltar à página de encomendas" disabled>
+                    <span aria-hidden="true">‹</span> Anterior
+                  </button>
+                  <span aria-hidden="true">✦</span>
+                  <button class="book-turn-button" id="book-next-page" type="button" aria-label="Avançar para o herbário de ramos">
+                    Seguinte <span aria-hidden="true">›</span>
+                  </button>
+                </footer>
+                <span class="book-page-curl" aria-hidden="true"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Modal de Definições -->
+    <div id="modal-settings" class="modal-backdrop hidden settings-backdrop" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <section class="modal-window cozy-card settings-window">
+        <header class="modal-header settings-header">
+          <div>
+            <p class="settings-eyebrow">FLORISTEVER · PERSONALIZAÇÃO</p>
+            <h2 id="settings-title">Definições do jogo</h2>
+          </div>
+          <button type="button" class="btn-close-modal" data-close="modal-settings" aria-label="Fechar definições"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px"><path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+        </header>
+        <div class="settings-layout">
+          <nav class="settings-tabs" role="tablist" aria-label="Categorias das definições" aria-orientation="vertical">
+            <button type="button" class="settings-tab is-active" id="settings-tab-general" role="tab" aria-selected="true" aria-controls="settings-panel-general" data-settings-tab="general"><span aria-hidden="true">⌂</span> Geral</button>
+            <button type="button" class="settings-tab" id="settings-tab-controls" role="tab" aria-selected="false" aria-controls="settings-panel-controls" data-settings-tab="controls" tabindex="-1"><span aria-hidden="true">⌖</span> Controlos</button>
+            <button type="button" class="settings-tab" id="settings-tab-appearance" role="tab" aria-selected="false" aria-controls="settings-panel-appearance" data-settings-tab="appearance" tabindex="-1"><span aria-hidden="true">✿</span> Aparência</button>
+            <button type="button" class="settings-tab" id="settings-tab-account" role="tab" aria-selected="false" aria-controls="settings-panel-account" data-settings-tab="account" tabindex="-1"><span aria-hidden="true">♡</span> Conta</button>
+            <button type="button" class="settings-tab" id="settings-tab-system" role="tab" aria-selected="false" aria-controls="settings-panel-system" data-settings-tab="system" tabindex="-1"><span aria-hidden="true">⚙</span> Sistema</button>
+          </nav>
+          <div class="settings-content">
+            <div class="modal-body settings-form">
+              <section class="settings-panel is-active" id="settings-panel-general" role="tabpanel" aria-labelledby="settings-tab-general" data-settings-panel="general">
+                <div class="settings-panel-heading"><span class="settings-panel-icon" aria-hidden="true">⌂</span><div><h3>O teu espaço</h3><p>Personaliza a floricultura e o ambiente sonoro.</p></div></div>
+                <section class="settings-card setting-item">
+                  <label for="store-name-input">Nome da floricultura</label>
+                  <div class="store-name-editor">
+                    <input type="text" id="store-name-input" maxlength="28" autocomplete="organization" aria-describedby="store-name-help">
+                    <button type="button" id="btn-save-store-name" class="btn-secondary">Guardar nome</button>
+                  </div>
+                  <p id="store-name-help" class="setting-help">O nome aparece na placa da loja e fica guardado neste dispositivo.</p>
+                </section>
+                <div class="settings-card settings-audio-grid">
+                  <div class="setting-item">
+                    <label for="music-volume">Música ambiente</label>
+                    <div class="slider-row">
+                      <input type="range" id="music-volume" min="0" max="1" step="0.05" value="0.5" aria-label="Volume da música">
+                      <button type="button" id="btn-toggle-music" class="btn-secondary settings-audio-toggle" aria-label="Silenciar música" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px"><path d="M11 5L6 9H2V15H6L11 19V5Z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M15.5 8.5C16.5 9.5 17 10.7 17 12C17 13.3 16.5 14.5 15.5 15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+                    </div>
+                  </div>
+                  <div class="setting-item">
+                    <label for="sfx-volume">Efeitos sonoros</label>
+                    <div class="slider-row">
+                      <input type="range" id="sfx-volume" min="0" max="1" step="0.05" value="0.7" aria-label="Volume dos efeitos sonoros">
+                      <button type="button" id="btn-toggle-sfx" class="btn-secondary settings-audio-toggle" aria-label="Silenciar efeitos sonoros" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px"><path d="M18 8C18 4.7 15.3 2 12 2C8.7 2 6 4.7 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z" fill="currentColor" stroke="currentColor" stroke-width="1.5"/><path d="M10.3 20C10.7 20.6 11.3 21 12 21C12.7 21 13.3 20.6 13.7 20" stroke="currentColor" stroke-width="2"/></svg></button>
+                    </div>
+                  </div>
+                </div>
+                <label class="settings-card settings-toggle-row" for="toggle-daynight"><span><strong>Ciclo dia/noite</strong><small>Uma volta completa dura cerca de seis minutos.</small></span><input type="checkbox" id="toggle-daynight" checked class="custom-checkbox"></label>
+              </section>
+
+              <section class="settings-panel" id="settings-panel-controls" role="tabpanel" aria-labelledby="settings-tab-controls" data-settings-panel="controls" hidden>
+                <div class="settings-panel-heading"><span class="settings-panel-icon" aria-hidden="true">⌖</span><div><h3>Controlos e interface</h3><p>Ajusta a forma como exploras e organizas o jardim.</p></div></div>
+                <section id="mobile-control-settings" class="settings-card setting-item" aria-labelledby="mobile-control-settings-title">
+                  <h4 id="mobile-control-settings-title">Controlos no telemóvel</h4>
+                  <p class="setting-help">Escolhe o lado do movimento e ajusta o tamanho dos controlos.</p>
+                  <label for="mobile-control-layout">Posição dos controlos</label>
+                  <select id="mobile-control-layout" class="native-display-select"><option value="left">Mover à esquerda</option><option value="right">Mover à direita</option></select>
+                  <label for="mobile-move-control-size">Tamanho do controlo Mover</label>
+                  <select id="mobile-move-control-size" class="native-display-select"><option value="small">Pequeno</option><option value="standard">Normal</option><option value="large">Grande</option></select>
+                  <label for="mobile-action-control-size">Tamanho do botão Agir</label>
+                  <select id="mobile-action-control-size" class="native-display-select"><option value="small">Pequeno</option><option value="standard">Normal</option><option value="large">Grande</option></select>
+                  <p id="mobile-control-save-error" class="setting-error hidden" role="alert">Não foi possível guardar estas definições. Foram repostas as opções anteriores.</p>
+                </section>
+                <section class="settings-card setting-item" aria-labelledby="hud-customization-title">
+                  <h4 id="hud-customization-title">Personalizar a interface</h4>
+                  <p class="setting-help">Move e redimensiona a HUD, notificações e controlos. Arrasta ou usa as setas para ajustar a posição.</p>
+                  <button type="button" id="btn-customize-hud" class="btn-secondary">Editar posições e tamanhos</button>
+                </section>
+              </section>
+
+              <section class="settings-panel" id="settings-panel-appearance" role="tabpanel" aria-labelledby="settings-tab-appearance" data-settings-panel="appearance" hidden>
+                <div class="settings-panel-heading"><span class="settings-panel-icon" aria-hidden="true">✿</span><div><h3>Aparência do jardim</h3><p>Escolhe um ambiente e define o teu estilo de decoração.</p></div></div>
+                <section class="settings-card setting-item" aria-labelledby="theme-choices-title">
+                  <h4 id="theme-choices-title">Tema visual</h4>
+                  <p class="setting-help">A escolha é cosmética e não altera o progresso nem as interações.</p>
+                  <fieldset class="theme-options" aria-describedby="theme-window-help">
+                    <legend class="visually-hidden">Tema visual</legend>
+                    <label class="theme-option"><input type="radio" name="theme-preference" value="auto"><span class="theme-option-swatch theme-swatch-auto" aria-hidden="true"></span><span class="theme-option-copy"><strong>Automático</strong><small>Halloween de 24 de outubro a 7 de novembro e Jardim dos Corações de 7 a 21 de fevereiro.</small></span></label>
+                    <label class="theme-option"><input type="radio" name="theme-preference" value="halloween"><span class="theme-option-swatch theme-swatch-halloween" aria-hidden="true"></span><span class="theme-option-copy"><strong>Halloween</strong><small>Ativa o tema sazonal em qualquer altura.</small></span></label>
+                    <label class="theme-option" id="theme-option-luminous"><input type="radio" name="theme-preference" value="luminous"><span class="theme-option-swatch theme-swatch-luminous" aria-hidden="true"></span><span class="theme-option-copy"><strong>Jardim Luminoso</strong><small id="theme-luminous-help">Desbloqueia ao atingir o nível 10.</small></span></label>
+                    <label class="theme-option"><input type="radio" name="theme-preference" value="jardim_coracoes"><span class="theme-option-swatch theme-swatch-hearts" aria-hidden="true"></span><span class="theme-option-copy"><strong>Jardim dos Corações</strong><small>Blush, sálvia e detalhes em ouro-rosa.</small></span></label>
+                    <label class="theme-option"><input type="radio" name="theme-preference" value="classic"><span class="theme-option-swatch theme-swatch-classic" aria-hidden="true"></span><span class="theme-option-copy"><strong>Padrão</strong><small>Mantém o visual habitual durante todo o ano.</small></span></label>
+                  </fieldset>
+                  <p id="theme-window-help" class="setting-help">Automático ativa os temas de evento. Padrão repõe o visual habitual.</p>
+                  <label class="theme-effects-option"><input id="theme-reduced-effects" type="checkbox" class="custom-checkbox"><span><strong>Reduzir efeitos decorativos</strong><small>Reduz animações e brilhos para uma experiência mais tranquila.</small></span></label>
+                  <p id="theme-performance-notice" class="setting-help hidden" role="status">Os efeitos luminosos foram temporariamente simplificados para manter o jogo fluido.</p>
+                  <p id="theme-save-error" class="theme-save-error hidden" role="alert">Não foi possível guardar esta preferência. O visual anterior foi mantido.</p>
+                </section>
+                <section class="settings-card setting-item decoration-settings-card" aria-labelledby="decoration-settings-title">
+                  <div><h4 id="decoration-settings-title">Decoração do jardim</h4><p class="setting-help">Reposiciona canteiros, bancos, placas e outros elementos decorativos.</p></div>
+                  <button id="btn-toggle-decoration-mode" class="btn-secondary settings-decoration-toggle" type="button" aria-label="Ativar modo de decoração" aria-pressed="false" title="Organizar a decoração do jardim"><span aria-hidden="true">✎</span> Organizar decoração</button>
+                </section>
+              </section>
+
+              <section class="settings-panel" id="settings-panel-account" role="tabpanel" aria-labelledby="settings-tab-account" data-settings-panel="account" hidden>
+                <div class="settings-panel-heading"><span class="settings-panel-icon" aria-hidden="true">♡</span><div><h3>Conta Light Group</h3><p>Sincroniza o progresso entre Web, Android e Windows.</p></div></div>
+                <div class="settings-card account-setting-item"><div id="account-settings-panel"></div></div>
+              </section>
+
+              <section class="settings-panel" id="settings-panel-system" role="tabpanel" aria-labelledby="settings-tab-system" data-settings-panel="system" hidden>
+                <div class="settings-panel-heading"><span class="settings-panel-icon" aria-hidden="true">⚙</span><div><h3>Sistema e ajuda</h3><p>Ajuda, detalhes da aplicação e ações de manutenção.</p></div></div>
+                <div id="native-display-setting" class="settings-card setting-item hidden"><label for="native-display-mode">Modo de ecrã</label><select id="native-display-mode" class="native-display-select"><option value="fullscreen">Tela Cheia</option><option value="borderless">Janela Cheia</option><option value="windowed">Janela</option></select><p class="setting-help">Escolhe como a aplicação ocupa o ecrã.</p></div>
+                <section id="developer-tools-panel" class="developer-tools-panel hidden" aria-labelledby="developer-tools-title"></section>
+                <section class="settings-card setting-item"><h4>Aprender a jogar</h4><p class="setting-help">Revê os controlos, as vendas, os menus e a progressão.</p><button type="button" id="btn-replay-tutorial" class="btn-secondary">Ver novamente</button></section>
+                <div class="settings-card info-block"><p><strong>FloristEver</strong> v1.0.8</p><p class="sub-credit">Obrigado por jogares FloristEver <svg class="ui-icon inline-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="12" cy="12" r="3.5" fill="#F7C948" stroke="#2F5D4A" stroke-width="1.5"/><circle cx="12" cy="5.5" r="3" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.2"/><circle cx="12" cy="18.5" r="3" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.2"/><circle cx="5.5" cy="12" r="3" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.2"/><circle cx="18.5" cy="12" r="3" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.2"/></svg></p><p class="powered-credit">Powered By Light Group</p></div>
+                <hr class="cozy-divider">
+                <div class="danger-zone"><p>Desejas recomeçar do zero?</p><button type="button" id="btn-reset-game" class="btn-danger">Apagar progresso e reiniciar</button></div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div id="modal-compost" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="compost-title" aria-describedby="compost-help">
+      <section class="modal-window cozy-card modal-small compost-window">
+        <header class="modal-header">
+          <h2 id="compost-title">Compostor biológico</h2>
+          <button type="button" class="btn-close-modal" data-close="modal-compost" aria-label="Fechar compostor">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px"><path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+          </button>
+        </header>
+        <div class="modal-body compost-form">
+          <p id="compost-help" class="compost-help">Escolhe as flores da mochila e a quantidade a transformar em composto. O descarte é permanente e não dá moedas nem stock.</p>
+          <div id="compost-flower-rows" class="compost-flower-rows" role="group" aria-label="Flores disponíveis na mochila"></div>
+          <p class="compost-selection-total" aria-live="polite">Selecionadas: <strong id="compost-selected-count">0</strong></p>
+          <p id="compost-selection-error" class="theme-save-error hidden" role="alert">A mochila mudou. Fecha e volta a abrir o compostor para atualizar as quantidades.</p>
+          <p id="compost-save-error" class="theme-save-error hidden" role="alert">Não foi possível guardar o descarte. As flores continuam na mochila.</p>
+          <div class="compost-actions">
+            <button type="button" class="btn-secondary" data-close="modal-compost">Cancelar</button>
+            <button type="button" id="btn-confirm-compost" class="btn-primary" disabled>Descartar selecionadas</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 5. Ecrã de Boas-Vindas / Progresso Offline -->
+    <div id="modal-welcome" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+      <div class="modal-window cozy-card modal-small text-center">
+        <div class="offline-icon" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21V13" stroke="#2F5D4A" stroke-width="2" stroke-linecap="round"/><path d="M12 14C8 12 7 8 8 5C11 5 13 8 12 14Z" fill="#5FA36B" stroke="#2F5D4A" stroke-width="1.5"/><path d="M12 14C16 12 17 8 16 5C13 5 11 8 12 14Z" fill="#A8D5A2" stroke="#2F5D4A" stroke-width="1.5"/><circle cx="12" cy="5" r="2.4" fill="#F7C948" stroke="#2F5D4A" stroke-width="1.3"/></svg></div>
+        <h2>Que bom ver-te de volta!</h2>
+        <p id="welcome-message">Os teus floristas e o caixa mantiveram a loja em funcionamento enquanto estiveste fora.</p>
+        <div class="offline-earnings-pill" id="offline-earnings-box">
+          Ganhaste: <strong id="offline-earned-amount"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="#F7C948" stroke="#2F5D4A" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="#FCE588" stroke="#2F5D4A" stroke-width="1.5"/><path d="M12 8.5V15.5" stroke="#2F5D4A" stroke-width="1.5" stroke-linecap="round"/></svg><span id="offline-earned-value">+0</span></strong>
+        </div>
+        <button id="btn-welcome-accept" class="btn-primary btn-large btn-bounce">Continuar a Jogar</button>
+      </div>
+    </div>
+
+    <!-- Ecrã Inicial -->
+    <div id="start-overlay" class="start-overlay-screen" role="main">
+      <div class="start-card start-onboarding-card cozy-card text-center">
+        <h1 class="game-logo">FloristEver</h1>
+        <p class="tagline">Uma floricultura acolhedora para momentos de tranquilidade</p>
+        <label class="onboarding-store-label" for="onboarding-store-name">Escolhe o nome da tua loja</label>
+        <input id="onboarding-store-name" class="onboarding-store-input" type="text" maxlength="28" required autocomplete="organization" aria-describedby="onboarding-store-help">
+        <p id="onboarding-store-help" class="onboarding-help">Podes alterar o nome mais tarde nas configurações.</p>
+
+        <section class="onboarding-terms" aria-label="Aceitação dos termos">
+          <label class="onboarding-terms-checkbox">
+            <input id="onboarding-terms-accepted" type="checkbox">
+            <span class="onboarding-checkbox-mark" aria-hidden="true"></span>
+            <span>Li e aceito os Termos e Condições e a Política de Privacidade da Light Group.</span>
+          </label>
+          <button type="button" id="btn-view-terms" class="btn-secondary onboarding-terms-link">Ver Termos</button>
+        </section>
+        <p id="onboarding-status" class="onboarding-status" role="status" aria-live="polite"></p>
+
+        <div id="onboarding-entry-options" class="onboarding-entry-options">
+          <button type="button" id="btn-onboarding-account" class="btn-primary btn-large">Criar conta / Entrar</button>
+          <button type="button" id="btn-play-guest" class="btn-secondary btn-large">Jogar como convidado</button>
+        </div>
+        <section id="onboarding-account-section" class="onboarding-account-section hidden" aria-label="Conta Light Group">
+          <div id="onboarding-account-panel"></div>
+          <button type="button" id="btn-onboarding-account-back" class="btn-secondary onboarding-back">Voltar às opções</button>
+        </section>
+        <footer class="onboarding-footer">
+          <p>© 2026 Light Group. Todos os direitos reservados.</p>
+          <p>Ao jogar como convidado, o progresso fica guardado apenas neste dispositivo.</p>
+        </footer>
+      </div>
+    </div>
+
+    <div id="game-tutorial" class="game-tutorial-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="game-tutorial-title">
+      <section class="game-tutorial-window">
+        <header class="game-tutorial-header">
+          <div>
+            <p class="game-tutorial-eyebrow">GUIA DE BOAS-VINDAS</p>
+            <h2 id="game-tutorial-title">A tua floricultura, passo a passo</h2>
+          </div>
+          <div class="game-tutorial-progress-wrap">
+            <span id="game-tutorial-progress-label">1 / 8</span>
+            <progress id="game-tutorial-progress" max="8" value="1" aria-label="Progresso do tutorial"></progress>
+          </div>
+        </header>
+        <div class="game-tutorial-rotate" aria-label="Sugestão para jogar com o telemóvel na horizontal">
+          <span class="game-tutorial-phone" aria-hidden="true"><span></span></span>
+          <p><strong>Uma dica para o telemóvel</strong><br>Roda o ecrã na horizontal para veres melhor o jardim. Também podes continuar na vertical.</p>
+        </div>
+        <div class="game-tutorial-layout">
+          <nav id="game-tutorial-topics" class="game-tutorial-topics" aria-label="Temas do tutorial"></nav>
+          <div id="game-tutorial-content" class="game-tutorial-content" aria-live="polite"></div>
+        </div>
+        <footer class="game-tutorial-footer">
+          <button type="button" id="btn-tutorial-skip" class="btn-secondary game-tutorial-skip">Pular</button>
+          <div class="game-tutorial-navigation">
+            <button type="button" id="btn-tutorial-previous" class="btn-secondary">Tema anterior</button>
+            <button type="button" id="btn-tutorial-next" class="btn-primary">Próximo tema</button>
+          </div>
+        </footer>
+      </section>
+    </div>
+
+    <div id="modal-terms" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="terms-title">
+      <div class="modal-window cozy-card terms-modal-window">
+        <div class="modal-header">
+          <h2 id="terms-title">Termos e Condições</h2>
+          <button type="button" id="btn-close-terms" class="btn-close-modal" aria-label="Fechar Termos">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px"><path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="modal-body terms-modal-body">
+          <article id="terms-document" class="terms-document" tabindex="0" aria-label="Texto integral dos Termos e Condições">A carregar os Termos e Condições...</article>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts do Jogo como Módulos ES -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
