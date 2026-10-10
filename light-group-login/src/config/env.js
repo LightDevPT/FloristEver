@@ -1,4 +1,11 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+dotenv.config();
+const currentFileDir = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(currentFileDir, '../../.env') });
+dotenv.config({ path: path.resolve(currentFileDir, '../../../.env') });
 import { z } from 'zod';
 
 const boolish = z.preprocess((value) => {
@@ -14,11 +21,11 @@ const schema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
   SUPABASE_SECRET_KEY: z.string().min(1),
-  ALLOWED_ORIGINS: z.string().default('http://localhost:8080,http://localhost:4000'),
+  ALLOWED_ORIGINS: z.string().default('http://localhost:8080,http://localhost:4000,https://floristever.netlify.app,capacitor://localhost,http://localhost'),
   APP_IDS: z.string().default('floristever'),
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET deve ter pelo menos 32 bytes/caracteres.'),
   HIBP_CHECK: boolish.default(false),
-  REQUIRE_EMAIL_VERIFICATION: boolish.default(true),
+  REQUIRE_EMAIL_VERIFICATION: boolish.default(false),
   ACCESS_TOKEN_MINUTES: z.coerce.number().int().positive().default(15),
   REFRESH_TOKEN_DAYS: z.coerce.number().int().positive().default(14),
   REFRESH_TOKEN_REMEMBER_DAYS: z.coerce.number().int().positive().default(30),
@@ -38,11 +45,11 @@ const schema = z.object({
       message: 'Usa uma chave Supabase Secret Key do servidor; não uses uma chave exposta ou publishable.'
     });
   }
-  if (values.NODE_ENV === 'production' && !values.SMTP_HOST) {
+  if (values.NODE_ENV === 'production' && !values.SMTP_HOST && values.REQUIRE_EMAIL_VERIFICATION) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['SMTP_HOST'],
-      message: 'SMTP_HOST é obrigatório em produção para verificação e recuperação de conta.'
+      message: 'SMTP_HOST é obrigatório em produção quando a verificação de email está ativa.'
     });
   }
 });

@@ -11,7 +11,7 @@ const ADDITIONAL_FILES = [
   }
 ];
 const DIRECTORIES = ['js', 'imagens', 'musicas'];
-const LOGIN_API_ORIGIN = new URL(process.env.LOGIN_API_ORIGIN || 'http://localhost:4000').origin;
+const LOGIN_API_ORIGIN = new URL(process.env.LOGIN_API_ORIGIN || 'https://floristever.netlify.app').origin;
 const LOGIN_API_BASE = `${LOGIN_API_ORIGIN}/api/v1`;
 
 const csp = [

@@ -33,13 +33,21 @@ export function createApp() {
   }));
   app.use(cors({
     origin(origin, callback) {
-      if (!origin || env.allowedOrigins.includes(origin)) return callback(null, true);
+      if (!origin || env.allowedOrigins.includes(origin) || env.allowedOrigins.includes('*')) return callback(null, true);
+      try {
+        const url = new URL(origin);
+        if (url.hostname.endsWith('.netlify.app') || url.hostname === 'localhost' || url.protocol === 'capacitor:') {
+          return callback(null, true);
+        }
+      } catch {}
       callback(new Error('Origem nao permitida.'));
     },
     credentials: true
   }));
   app.use(cookieParser());
   app.use('/api/v1/saves', express.json({ limit: '300kb' }));
+  app.use('/.netlify/functions/api/saves', express.json({ limit: '300kb' }));
+  app.use('/.netlify/functions/api/api/v1/saves', express.json({ limit: '300kb' }));
   app.use(express.json({ limit: '100kb' }));
   app.use((req, res, next) => {
     if (!req.cookies?.lg_csrf) {
@@ -55,12 +63,17 @@ export function createApp() {
   app.use(csrfGuard);
   app.use('/demo', express.static(path.resolve(demoDirectory), { dotfiles: 'deny', index: false }));
 
-  app.get('/api/v1/health', (_req, res) => {
+  const apiRouter = express.Router();
+  apiRouter.get('/health', (_req, res) => {
     res.json({ ok: true, data: { status: 'healthy', service: 'light-group-login' } });
   });
-  app.use('/api/v1/auth', authRouter);
-  app.use('/api/v1/users', userRouter);
-  app.use('/api/v1/saves', saveRouter);
+  apiRouter.use('/auth', authRouter);
+  apiRouter.use('/users', userRouter);
+  apiRouter.use('/saves', saveRouter);
+
+  app.use('/api/v1', apiRouter);
+  app.use('/.netlify/functions/api', apiRouter);
+  app.use('/.netlify/functions/api/api/v1', apiRouter);
   app.use(notFound);
   app.use(errorHandler);
   return app;

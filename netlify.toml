@@ -1,0 +1,14 @@
+[build]
+  publish = "dist"
+  command = "npm run build:web"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["light-group-login/**"]
+
+[[redirects]]
+  from = "/api/v1/*"
+  to = "/.netlify/functions/api/api/v1/:splat"
+  status = 200
+  force = true
