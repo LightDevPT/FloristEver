@@ -1,6 +1,6 @@
 {
   "name": "floristever",
-  "version": "1.0.8",
+  "version": "2.0.0",
   "description": "FloristEver - jogo cozy de floricultura para web, Android e Windows.",
   "private": true,
   "main": "electron/main.js",
@@ -15,7 +15,7 @@
     "win:pack": "npm run validate && electron-builder --win portable",
     "win:installer": "npm run validate && electron-builder --win nsis",
     "android:add": "npm run build:web && cap add android",
-    "android:sync": "npm run validate && cap sync android",
+    "android:sync": "npm run validate && cap sync android && node --experimental-default-type=module scripts/patch-android-java17.mjs",
     "android:open": "npm run android:sync && cap open android",
     "android:apk:debug": "npm run android:sync && cd android && gradlew.bat assembleDebug",
     "android:apk:release": "npm run android:sync && cd android && gradlew.bat assembleRelease",

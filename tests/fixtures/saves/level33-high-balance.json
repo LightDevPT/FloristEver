@@ -1,0 +1,907 @@
+{
+  "schemaVersion": 1,
+  "economyVersion": 2,
+  "employmentVersion": 1,
+  "coins": 5240000,
+  "reputation": 1520000,
+  "level": 33,
+  "storeName": "FloristEver Prime",
+  "stock": {
+    "daisy": 40,
+    "tulip": 40,
+    "sunflower": 40,
+    "rose": 40,
+    "orchid": 40,
+    "lavender": 40,
+    "peony": 40,
+    "camellia": 40,
+    "iris": 40,
+    "jasmine": 40,
+    "gardenia": 40,
+    "anemone": 40,
+    "dahlia": 40,
+    "chrysanthemum": 40,
+    "foxglove": 40,
+    "verbena": 40,
+    "hydrangea": 40,
+    "lotus": 40,
+    "magnolia": 40,
+    "protea": 40,
+    "ranunculus": 40,
+    "alstroemeria": 40
+  },
+  "basket": [
+    "alstroemeria",
+    "ranunculus",
+    "protea"
+  ],
+  "upgrades": {
+    "cashier": 1,
+    "harvester": 10,
+    "bouquetAssistant": 1,
+    "basketCapacity": 10,
+    "speedBoots": 10,
+    "growthSpeed": 10,
+    "counterUpgrade": 10,
+    "shopDecor": 10,
+    "shopExpansion": 5,
+    "bouquetBench": 5
+  },
+  "employment": {
+    "active": {
+      "cashier": true,
+      "harvester": true,
+      "bouquetAssistant": true
+    },
+    "nextPayrollAt": 0
+  },
+  "settings": {
+    "sfxVolume": 0.8,
+    "musicVolume": 0.5,
+    "sfxMuted": false,
+    "musicMuted": false,
+    "dayNightCycle": true
+  },
+  "unlockedFlowers": {
+    "daisy": true,
+    "tulip": true,
+    "sunflower": true,
+    "rose": true,
+    "orchid": true,
+    "lavender": true,
+    "peony": true,
+    "camellia": true,
+    "iris": true,
+    "jasmine": true,
+    "gardenia": true,
+    "anemone": true,
+    "dahlia": true,
+    "chrysanthemum": true,
+    "foxglove": true,
+    "verbena": true,
+    "hydrangea": true,
+    "lotus": true,
+    "magnolia": true,
+    "protea": true,
+    "ranunculus": true,
+    "alstroemeria": true
+  },
+  "discoveredBouquets": [
+    "alstroemeria+protea",
+    "daisy+tulip+sunflower"
+  ],
+  "collection": {
+    "harvestedFlowers": {
+      "daisy": true,
+      "tulip": true,
+      "sunflower": true,
+      "rose": true,
+      "orchid": true,
+      "lavender": true,
+      "peony": true,
+      "camellia": true,
+      "iris": true,
+      "jasmine": true,
+      "gardenia": true,
+      "anemone": true,
+      "dahlia": true,
+      "chrysanthemum": true,
+      "foxglove": true,
+      "verbena": true,
+      "hydrangea": true,
+      "lotus": true,
+      "magnolia": true,
+      "protea": true,
+      "ranunculus": true,
+      "alstroemeria": true
+    },
+    "flowerRecords": {
+      "daisy": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "tulip": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "sunflower": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "rose": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "orchid": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "lavender": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "peony": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "camellia": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "iris": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "jasmine": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "gardenia": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "anemone": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "dahlia": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "chrysanthemum": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "foxglove": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "verbena": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "hydrangea": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "lotus": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "magnolia": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "protea": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "ranunculus": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      },
+      "alstroemeria": {
+        "harvested": 500,
+        "sold": 400,
+        "usedInBouquets": 80
+      }
+    },
+    "exhibitions": [
+      "spring-bloom",
+      "sunlit-garden"
+    ]
+  },
+  "orders": [
+    {
+      "id": "apology_gift",
+      "isCompleted": true
+    },
+    {
+      "id": "summer_wedding",
+      "isCompleted": true
+    },
+    {
+      "id": "first_date",
+      "isCompleted": true
+    },
+    {
+      "id": "royal_tribute",
+      "isCompleted": true
+    }
+  ],
+  "orderCycle": 5,
+  "stats": {
+    "totalHarvested": 18500,
+    "totalCoinsEarned": 12500000,
+    "totalCoinsSpent": 7260000,
+    "customersServed": 3450,
+    "bouquetsCrafted": 620,
+    "flowersSold": 9800
+  },
+  "tutorial": {
+    "currentStep": 8,
+    "completed": true
+  },
+  "plots": [
+    {
+      "id": 0,
+      "flowerId": "daisy",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 0,
+      "gridY": 0,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "flowerId": "tulip",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 1,
+      "gridY": 0,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "flowerId": "sunflower",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 2,
+      "gridY": 0,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "flowerId": "rose",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 3,
+      "gridY": 0,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "flowerId": "orchid",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 4,
+      "gridY": 0,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "flowerId": "lavender",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 5,
+      "gridY": 0,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "flowerId": "peony",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 6,
+      "gridY": 0,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "flowerId": "camellia",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 7,
+      "gridY": 0,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "flowerId": "iris",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 0,
+      "gridY": 1,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "flowerId": "jasmine",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 1,
+      "gridY": 1,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "flowerId": "gardenia",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 2,
+      "gridY": 1,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "flowerId": "anemone",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 3,
+      "gridY": 1,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "flowerId": "dahlia",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 4,
+      "gridY": 1,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "flowerId": "chrysanthemum",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 5,
+      "gridY": 1,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "flowerId": "foxglove",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 6,
+      "gridY": 1,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "flowerId": "verbena",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 7,
+      "gridY": 1,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "flowerId": "hydrangea",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 0,
+      "gridY": 2,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "flowerId": "lotus",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 1,
+      "gridY": 2,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "flowerId": "magnolia",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 2,
+      "gridY": 2,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "flowerId": "protea",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 3,
+      "gridY": 2,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "flowerId": "ranunculus",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 4,
+      "gridY": 2,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "flowerId": "alstroemeria",
+      "unlocked": true,
+      "optional": false,
+      "cost": 0,
+      "gridX": 5,
+      "gridY": 2,
+      "flowers": [
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        },
+        {
+          "progress": 1
+        }
+      ]
+    }
+  ],
+  "lastSaveTime": 1791727277820
+}

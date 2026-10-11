@@ -51,7 +51,7 @@ function captureWarnings(callback) {
   }
 }
 
-for (const name of ['new-game.json', 'mid-game.json', 'advanced-game.json']) {
+for (const name of ['new-game.json', 'mid-game.json', 'advanced-game.json', 'level33-high-balance.json']) {
   test(`legacy ${name} migrates without mutating its read-only fixture`, async () => {
     const fixture = await readFixture(name);
     const original = structuredClone(fixture);
