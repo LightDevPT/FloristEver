@@ -7,6 +7,7 @@ import { UPGRADES_CONFIG } from './config/upgrades.js';
 import { BOUQUET_CATEGORIES, calculateBouquetHarmony, SPECIAL_ORDERS, WRAPPERS } from './config/bouquets.js';
 import { CUSTOMER_CONFIG } from './config/customers.js';
 import { CURRENT_SAVE_SCHEMA_VERSION, migrateSaveData } from './save-migrations.mjs';
+import { createDefaultSubsoloState, SubsoloManager } from './subsolo/subsolo-state.js';
 
 const STORAGE_KEY = 'floristever_save_v1';
 const BACKUP_STORAGE_KEY = 'floristever_save_backup_v1';
@@ -205,6 +206,10 @@ export class GameState {
       },
       nextPayrollAt: null
     };
+
+    // Subsolo (v2.0.0)
+    this.subsolo = createDefaultSubsoloState();
+    this.subsoloManager = new SubsoloManager(this);
 
     // Definições de áudio e ambientação
     this.settings = {
@@ -1366,6 +1371,7 @@ export class GameState {
         wateredUntil: Number.isFinite(p.wateredUntil) ? p.wateredUntil : 0,
         flowers: p.flowers.map(f => ({ progress: Math.min(1.0, f.progress) }))
       })),
+      subsolo: this.subsolo,
       lastSaveTime: this.lastSaveTime
     };
   }
@@ -1677,6 +1683,54 @@ export class GameState {
         this.ensureNextPlot();
       }
 
+      this.subsolo = {
+        ...createDefaultSubsoloState(),
+        ...(data.subsolo || {})
+      };
+      if (data.subsolo) {
+        this.subsolo.conteudoSecreto = {
+          ...createDefaultSubsoloState().conteudoSecreto,
+          ...(data.subsolo.conteudoSecreto || {})
+        };
+        this.subsolo.respeito = {
+          ...createDefaultSubsoloState().respeito,
+          ...(data.subsolo.respeito || {})
+        };
+        this.subsolo.armazemOculto = {
+          ...createDefaultSubsoloState().armazemOculto,
+          ...(data.subsolo.armazemOculto || {})
+        };
+        this.subsolo.mala = {
+          ...createDefaultSubsoloState().mala,
+          ...(data.subsolo.mala || {})
+        };
+        this.subsolo.cofre = {
+          ...createDefaultSubsoloState().cofre,
+          ...(data.subsolo.cofre || {})
+        };
+        this.subsolo.recursos = {
+          ...createDefaultSubsoloState().recursos,
+          ...(data.subsolo.recursos || {})
+        };
+        this.subsolo.calor = {
+          ...createDefaultSubsoloState().calor,
+          ...(data.subsolo.calor || {})
+        };
+        this.subsolo.caderno = {
+          ...createDefaultSubsoloState().caderno,
+          ...(data.subsolo.caderno || {})
+        };
+        this.subsolo.melhorias = {
+          ...createDefaultSubsoloState().melhorias,
+          ...(data.subsolo.melhorias || {})
+        };
+        this.subsolo.ajudantes = {
+          ...createDefaultSubsoloState().ajudantes,
+          ...(data.subsolo.ajudantes || {})
+        };
+      }
+      this.subsoloManager = new SubsoloManager(this);
+
       const now = Date.now();
       const offlineResult = this.processOfflineEmployment(data.lastSaveTime, now);
       this.lastSaveTime = now;
@@ -1717,6 +1771,9 @@ export class GameState {
     }
 
     const elapsedMs = Math.min(MAX_OFFLINE_MS, now - lastSavedAt);
+    if (this.subsoloManager) {
+      this.subsoloManager.update(0, now);
+    }
     let cursor = now - elapsedMs;
     if (
       this.employment.nextPayrollAt !== null

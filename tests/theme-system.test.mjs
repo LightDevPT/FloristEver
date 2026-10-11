@@ -115,7 +115,7 @@ test('theme settings and manifests are included in the offline app sources', () 
   const serviceWorker = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
-  assert.match(serviceWorker, /const CACHE_NAME = 'floristever-v77'/);
+  assert.match(serviceWorker, /const CACHE_NAME = 'floristever-v78'/);
   assert.match(serviceWorker, /'\.\/js\/themes\/luminous-garden\.js'/);
   assert.match(html, /name="theme-preference" value="luminous"/);
   assert.match(html, /Desbloqueia ao atingir o nível 10/);

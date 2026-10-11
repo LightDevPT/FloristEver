@@ -1,5 +1,5 @@
 // FloristEver Service Worker
-const CACHE_NAME = 'floristever-v77';
+const CACHE_NAME = 'floristever-v78';
 const ASSETS_TO_CACHE = [
   './',
   './docs/FloristEver_Termos_e_Condicoes.md',
@@ -41,6 +41,11 @@ const ASSETS_TO_CACHE = [
   './js/garden-paths.js',
   './js/light-login-client.js',
   './js/main.js',
+  './js/subsolo/subsolo-config.js',
+  './js/subsolo/scene-manager.js',
+  './js/subsolo/subsolo-state.js',
+  './js/subsolo/subsolo-renderer.js',
+  './js/subsolo/secret-customer-manager.js',
   './js/save-migrations.mjs',
   './js/state.js',
   './js/theme-manager.js',

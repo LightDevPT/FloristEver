@@ -9,7 +9,7 @@
     "build:web": "node scripts/build-web.js",
     "validate": "npm run build:web && npm run validate:content && node scripts/validate-build.js",
     "validate:content": "node --experimental-default-type=module scripts/validate-content.mjs",
-    "test:game": "node --experimental-default-type=module --test tests/content-validation.test.mjs tests/save-migrations.test.mjs tests/customer-orders.test.mjs tests/assistant-skills.test.mjs tests/theme-system.test.mjs tests/audio.test.mjs tests/shop-expansion.test.mjs tests/hud-customizer.test.mjs tests/long-term-projects.test.mjs tests/herbarium-challenge-grace.test.mjs tests/objective-care.test.mjs tests/garden-content.test.mjs tests/garden-paths.test.mjs tests/local-test-mode.test.mjs tests/main-module-syntax.test.mjs tests/player-collision.test.mjs",
+    "test:game": "node --experimental-default-type=module --test tests/content-validation.test.mjs tests/save-migrations.test.mjs tests/customer-orders.test.mjs tests/assistant-skills.test.mjs tests/theme-system.test.mjs tests/audio.test.mjs tests/shop-expansion.test.mjs tests/hud-customizer.test.mjs tests/long-term-projects.test.mjs tests/herbarium-challenge-grace.test.mjs tests/objective-care.test.mjs tests/garden-content.test.mjs tests/garden-paths.test.mjs tests/local-test-mode.test.mjs tests/main-module-syntax.test.mjs tests/player-collision.test.mjs tests/subsolo.test.mjs",
     "standalone": "node build_standalone.js",
     "electron:start": "npm run build:web && electron .",
     "win:pack": "npm run validate && electron-builder --win portable",
