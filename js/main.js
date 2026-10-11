@@ -40,6 +40,9 @@ import { getIcon } from './icons.js';
 import { FLOWERS_CONFIG, FLOWER_ORDER } from './config/flowers.js';
 import { getShopExpansionVisualSize } from './config/upgrades.js';
 import { getGardenPathSegments } from './garden-paths.js';
+import { SceneManager, SCENE_STATES } from './subsolo/scene-manager.js';
+import { SubsoloRenderer } from './subsolo/subsolo-renderer.js';
+import { SecretCustomerManager } from './subsolo/secret-customer-manager.js';
 
 const MOBILE_CONTROL_LAYOUTS = new Set(['left', 'right']);
 const MOBILE_CONTROL_SIZES = new Set(['small', 'standard', 'large']);
@@ -305,6 +308,17 @@ class Game {
     this.hudCustomizer = new HudCustomizer(state);
     this.tutorial = new TutorialManager(state);
     this.gameTutorial = new GameTutorial(this.hud);
+
+    // Subsolo (v2.0.0)
+    this.sceneManager = new SceneManager(this);
+    this.subsoloRenderer = new SubsoloRenderer(this, state.subsoloManager);
+    this.secretCustomerManager = new SecretCustomerManager(this, state.subsoloManager);
+    state.subscribe((event, data) => {
+      if (event === 'level_up' && data?.newLevel >= 33) {
+        this.hud.showToast('Uma carta anónima chegou à floricultura... O Subsolo está disponível!', 'book');
+      }
+    });
+
     this.setupInputs();
     this.setupCompostModal();
     this.setupAudioVisibility();
@@ -513,6 +527,40 @@ class Game {
         return;
       }
 
+      // ── Interações no Subsolo ──
+      if (this.sceneManager?.isSubsoloActive()) {
+        // Clicar perto da escada de saída → subir
+        const ladderX = 180;
+        const ladderY = 50;
+        if (distance(worldPos.x, worldPos.y, ladderX, ladderY) < 50) {
+          this.sceneManager.startSubir();
+          return;
+        }
+        // Clicar no dínamo manual → gerar energia
+        const dynamoX = 320;
+        const dynamoY = 260;
+        if (distance(worldPos.x, worldPos.y, dynamoX, dynamoY) < 40) {
+          const gained = state.subsoloManager?.crankManualDynamo();
+          if (gained > 0) this.hud.showToast(`+${gained} energia manual`, 'check');
+          return;
+        }
+        return; // restante lógica de clique só na superfície
+      }
+
+      // ── Interações na Superfície com o Subsolo ──
+      if (this.sceneManager?.isSurfaceActive() && state.subsoloManager?.canAccessGrate()) {
+        // Clicar na grelha → descida / concessão
+        const gratePos = this.sceneManager?.gratePosition;
+        if (gratePos && distance(worldPos.x, worldPos.y, gratePos.x, gratePos.y) <= gratePos.radius + 10) {
+          this.handleGrateInteraction();
+          return;
+        }
+        // Clicar no cliente secreto
+        if (this.secretCustomerManager?.checkPlayerInteraction(worldPos.x, worldPos.y)) {
+          return;
+        }
+      }
+
       // Verifica se clicou numa parcela bloqueada para comprar
       const handled = this.fieldManager.handleClick(worldPos.x, worldPos.y);
       // Em ecrãs tácteis, tocar no terreno não deve iniciar movimento.
@@ -702,6 +750,41 @@ class Game {
     if (distToCounter < 95) {
       const served = this.customerManager.serveWaitingCustomer();
       if (served) return;
+    }
+  }
+
+  /**
+   * Interação com a grelha do esgoto: paga concessão (1ª vez) ou desce ao Subsolo.
+   */
+  handleGrateInteraction() {
+    if (!state.subsoloManager?.canAccessGrate()) return;
+
+    if (!state.subsolo?.concessaoPaga) {
+      // Ainda não pagou a concessão
+      const cost = 240000;
+      if (state.coins < cost) {
+        this.hud.showToast(
+          `Precisas de ${cost.toLocaleString()} moedas para abrir a concessão do túnel.`,
+          'lock'
+        );
+        return;
+      }
+      const confirm = window.confirm(
+        `Pagar ${cost.toLocaleString()} moedas para garantir a concessão do túnel secreto? (Amortização em ≈13 h)`
+      );
+      if (!confirm) return;
+      const ok = state.subsoloManager.payConcession();
+      if (ok) {
+        this.hud.showToast('Concessão paga! A grelha está aberta. Bem-vindo ao Subsolo.', 'check');
+      } else {
+        this.hud.showToast('Não foi possível pagar a concessão. Verifica o teu saldo.', 'error');
+      }
+      return;
+    }
+
+    // Concessão paga → iniciar descida
+    if (!this.sceneManager?.startDescer()) {
+      this.hud.showToast('Não é possível descer agora.', 'info');
     }
   }
 
@@ -1110,6 +1193,75 @@ class Game {
         }
       });
     }
+
+    // ── Subsolo: toggles de conteúdo secreto (só visíveis após nível 33) ──
+    const toggleConteudo = document.getElementById('toggle-subsolo-conteudo');
+    const toggleDiscreto = document.getElementById('toggle-subsolo-discreto');
+    const toggleTranquilo = document.getElementById('toggle-subsolo-tranquilo');
+    const toggleCodigos = document.getElementById('toggle-subsolo-codigos');
+    const subsoloSettings = document.getElementById('subsolo-settings-section');
+
+    const refreshSubsoloSettings = () => {
+      const eligible = state.level >= 33;
+      subsoloSettings?.classList.toggle('hidden', !eligible);
+      if (!eligible || !state.subsolo) return;
+      const cs = state.subsolo.conteudoSecreto;
+      if (toggleConteudo) toggleConteudo.checked = !!cs.ativo;
+      if (toggleDiscreto) {
+        toggleDiscreto.checked = !!cs.modoDiscreto;
+        toggleDiscreto.disabled = !cs.ativo;
+      }
+      if (toggleTranquilo) {
+        toggleTranquilo.checked = !!cs.modoTranquilo;
+        toggleTranquilo.disabled = !cs.ativo;
+      }
+      if (toggleCodigos) {
+        toggleCodigos.checked = !!cs.ajudaCodigos;
+        toggleCodigos.disabled = !cs.ativo;
+      }
+    };
+
+    toggleConteudo?.addEventListener('change', (e) => {
+      if (!state.subsolo) return;
+      const cs = state.subsolo.conteudoSecreto;
+      if (e.target.checked && !cs.consentimento) {
+        const ok = confirm(
+          'O Subsolo contém conteúdo temático fictício (mercado secreto de variedades raras). '
+          + 'Este conteúdo é opcional e de ficção. Confirmas que tens +18 anos e que pretendes ativar?'
+        );
+        if (!ok) {
+          e.target.checked = false;
+          return;
+        }
+        cs.consentimento = true;
+      }
+      cs.ativo = e.target.checked;
+      state.save();
+      refreshSubsoloSettings();
+    });
+
+    toggleDiscreto?.addEventListener('change', (e) => {
+      if (!state.subsolo) return;
+      state.subsolo.conteudoSecreto.modoDiscreto = e.target.checked;
+      state.save();
+    });
+
+    toggleTranquilo?.addEventListener('change', (e) => {
+      if (!state.subsolo) return;
+      state.subsolo.conteudoSecreto.modoTranquilo = e.target.checked;
+      state.save();
+    });
+
+    toggleCodigos?.addEventListener('change', (e) => {
+      if (!state.subsolo) return;
+      state.subsolo.conteudoSecreto.ajudaCodigos = e.target.checked;
+      state.save();
+    });
+
+    state.subscribe((event) => {
+      if (event === 'level_up' || event === 'state_loaded') refreshSubsoloSettings();
+    });
+    refreshSubsoloSettings();
   }
 
   setupThemesModal() {
@@ -1604,6 +1756,15 @@ class Game {
   }
 
   update(dt) {
+    this.sceneManager?.update(dt);
+    if (this.sceneManager?.isSubsoloActive()) {
+      this.subsoloRenderer?.update(dt);
+      state.subsoloManager?.update(dt);
+      return;
+    }
+    state.subsoloManager?.update(dt);
+    this.secretCustomerManager?.update(dt, this.sceneManager?.isSurfaceActive());
+
     this.gameTime += dt;
     this.challengeRefreshTimer += dt;
     if (this.challengeRefreshTimer >= 5) {
@@ -1746,6 +1907,14 @@ class Game {
 
     this.ctx.clearRect(0, 0, viewW, viewH);
 
+    // ── SUBSOLO: renderiza o mundo subterrâneo em vez da superfície ──
+    if (this.sceneManager?.isSubsoloActive()) {
+      this.subsoloRenderer?.render(this.ctx, viewW, viewH);
+      this.sceneManager.drawTransitionOverlay(this.ctx, viewW, viewH);
+      this.drawMinimap();
+      return;
+    }
+
     this.ctx.save();
     // Centra a câmara na tela com zoom
     this.ctx.translate(viewW / 2, viewH / 2);
@@ -1778,6 +1947,11 @@ class Game {
     this.renderExpansionZones();
     this.renderZoneFindings();
     themeManager.drawLayer(this.ctx, 'drawGardenDecor', visibleDecorations);
+
+    // 2b. Grelha do esgoto (entrada Subsolo) — apenas quando acessível
+    if (state.subsoloManager?.canAccessGrate()) {
+      this.sceneManager?.drawGrateOnSurface(this.ctx, this.visibleWorldBounds);
+    }
 
     // 3. Edifício da Loja e Balcão
     const shopBounds = this.getShopBuildingBounds();
@@ -1823,8 +1997,13 @@ class Game {
     // 4. Parcelas e Flores
     this.fieldManager.draw(this.ctx, this.visibleWorldBounds);
 
-    // 5. Clientes
+    // 5. Clientes (superfície)
     this.customerManager.draw(this.ctx, this.visibleWorldBounds);
+
+    // 5b. Cliente Secreto (superfície)
+    if (state.subsoloManager?.canAccessGrate()) {
+      this.secretCustomerManager?.draw(this.ctx, this.visibleWorldBounds);
+    }
 
     // 6. Ajudantes Colhedores
     this.workerManager.draw(this.ctx, this.visibleWorldBounds);
@@ -1869,6 +2048,10 @@ class Game {
 
     // 10. Ciclo completo de dia, pôr do sol, noite e alvorada em todos os temas.
     if (dayNightLighting) this.renderDayNightOverlay(viewW, viewH, dayNightLighting);
+
+    // 11. Overlay de transição de cena (fade in/out)
+    this.sceneManager?.drawTransitionOverlay(this.ctx, viewW, viewH);
+
     this.drawMinimap();
   }
 
