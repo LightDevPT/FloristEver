@@ -8,6 +8,7 @@ import test from 'node:test';
 import { GameState } from '../js/state.js';
 import { SceneManager, SCENE_STATES } from '../js/subsolo/scene-manager.js';
 import { SubsoloManager, createDefaultSubsoloState } from '../js/subsolo/subsolo-state.js';
+import { SubsoloRenderer } from '../js/subsolo/subsolo-renderer.js';
 import { SUBSOLO_ENABLED, SUBSOLO_UNLOCK_LEVEL, SUBSOLO_VARIETIES, SUBSOLO_PRODUCTS } from '../js/subsolo/subsolo-config.js';
 
 class MemoryStorage {
@@ -230,3 +231,100 @@ test('heat inspection: hiding the safe evades penalty, failure incurs fine', () 
   assert.ok(state.coins < 20000, 'Multa deduzida com sucesso');
   assert.ok(manager.data.calor.bloqueadoAte > Date.now(), 'Vendas bloqueadas temporariamente');
 });
+
+test('scene manager fires onTransitionComplete callback on scene enter, exit and emergency', () => {
+  const transitions = [];
+  const mockGame = {
+    player: { x: 0, y: 0 },
+    camera: { x: 0, y: 0 },
+    hud: { closeAllModals: () => {}, showToast: () => {} },
+    soundManager: { playTone: () => {} },
+    state: new GameState()
+  };
+
+  const sceneManager = new SceneManager(mockGame);
+  sceneManager.onTransitionComplete = (scene) => transitions.push(scene);
+
+  // Descer
+  sceneManager.startDescer();
+  sceneManager.update(0.35);
+  sceneManager.update(0.35);
+  assert.equal(transitions[0], SCENE_STATES.SUBSOLO);
+
+  // Subir
+  sceneManager.startSubir();
+  sceneManager.update(0.35);
+  sceneManager.update(0.35);
+  assert.equal(transitions[1], SCENE_STATES.SUPERFICIE);
+
+  // Saída de emergência
+  sceneManager.currentState = SCENE_STATES.SUBSOLO;
+  sceneManager.emergencyExitToSurface();
+  assert.equal(transitions[2], SCENE_STATES.SUPERFICIE);
+});
+
+test('subsolo renderer correctly identifies interactive 2D workstations', () => {
+  const state = new GameState();
+  const renderer = new SubsoloRenderer({ player: { x: 180, y: 360 } }, state.subsoloManager);
+
+  assert.equal(renderer.getStationAt(120, 200), 'ladder');
+  assert.equal(renderer.getStationAt(260, 270), 'dynamo');
+  assert.equal(renderer.getStationAt(480, 270), 'cultivo');
+  assert.equal(renderer.getStationAt(680, 270), 'secagem');
+  assert.equal(renderer.getStationAt(870, 270), 'prep');
+  assert.equal(renderer.getStationAt(960, 270), 'logistica');
+  assert.equal(renderer.getStationAt(500, 420), null); // chão navegável livre
+});
+
+test('full underground production pipeline: plant -> harvest -> dry -> prep -> mala -> cofre -> sale', () => {
+  const state = new GameState();
+  state.level = 33;
+  state.coins = 50000;
+  state.subsolo.concessaoPaga = true;
+  const manager = state.subsoloManager;
+
+  // 1. Plantar no canteiro 2
+  assert.equal(manager.plantSeed(2, 'sombra_verde'), true);
+  assert.equal(manager.data.canteiros[2].status, 'growing');
+
+  // 2. Crescimento até estar pronto
+  manager.data.canteiros[2].progress = 1.0;
+  manager.data.canteiros[2].status = 'ready';
+
+  // 3. Colher para estendal de secagem
+  assert.equal(manager.harvestPlot(2), true);
+  assert.equal(manager.data.canteiros[2].status, 'empty');
+  assert.equal(manager.data.estendais[0].status, 'drying');
+
+  // 4. Secar e recolher folhas curadas para o armazém oculto
+  manager.data.estendais[0].status = 'ready';
+  const folhaInitial = manager.data.armazemOculto.folhasSecas;
+  assert.equal(manager.collectRack(0), true);
+  assert.ok(manager.data.armazemOculto.folhasSecas > folhaInitial);
+
+  // 5. Preparar na bancada
+  assert.equal(manager.startPreparation('ramo'), true);
+  assert.equal(manager.data.preparacao.status, 'preparing');
+  manager.data.preparacao.status = 'ready';
+  const ramoInitial = manager.data.armazemOculto.ramo;
+  assert.equal(manager.collectPreparation(), true);
+  assert.equal(manager.data.armazemOculto.ramo, ramoInitial + 1);
+
+  // 6. Transferir do Armazém para a Mala
+  const malaInitial = manager.data.mala.ramo;
+  assert.equal(manager.transferToMala('ramo', 1), true);
+  assert.equal(manager.data.mala.ramo, malaInitial + 1);
+
+  // 7. Depositar da Mala no Cofre da Floricultura
+  const cofreInitial = manager.data.cofre.ramo;
+  assert.equal(manager.depositMalaToCofre('ramo', 1), true);
+  assert.equal(manager.data.cofre.ramo, cofreInitial + 1);
+
+  // 8. Venda a Cliente Secreto a partir do Cofre
+  const walletCoins = state.coins;
+  const sale = manager.completeSale({ productId: 'ramo', quantity: 1 }, 'none');
+  assert.equal(sale.success, true);
+  assert.ok(state.coins > walletCoins);
+  assert.equal(manager.data.cofre.ramo, cofreInitial);
+});
+

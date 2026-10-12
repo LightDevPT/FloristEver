@@ -42,6 +42,7 @@ import { getShopExpansionVisualSize } from './config/upgrades.js';
 import { getGardenPathSegments } from './garden-paths.js';
 import { SceneManager, SCENE_STATES } from './subsolo/scene-manager.js';
 import { SubsoloRenderer } from './subsolo/subsolo-renderer.js';
+import { SubsoloUI } from './subsolo/subsolo-ui.js';
 import { SecretCustomerManager } from './subsolo/secret-customer-manager.js';
 
 const MOBILE_CONTROL_LAYOUTS = new Set(['left', 'right']);
@@ -312,7 +313,25 @@ class Game {
     // Subsolo (v2.0.0)
     this.sceneManager = new SceneManager(this);
     this.subsoloRenderer = new SubsoloRenderer(this, state.subsoloManager);
+    this.subsoloUI = new SubsoloUI(this, state.subsoloManager);
+    window.__floristSubsoloUI = this.subsoloUI;
     this.secretCustomerManager = new SecretCustomerManager(this, state.subsoloManager);
+
+    this.sceneManager.onTransitionComplete = (newState) => {
+      if (newState === SCENE_STATES.SUBSOLO) {
+        this.subsoloUI.setSubsoloActive(true);
+        if (this.player) {
+          this.player.x = 180;
+          this.player.y = 360;
+          this.player.targetX = 180;
+          this.player.targetY = 360;
+          this.player.hasTarget = false;
+        }
+      } else if (newState === SCENE_STATES.SUPERFICIE) {
+        this.subsoloUI.setSubsoloActive(false);
+      }
+    };
+
     state.subscribe((event, data) => {
       if (event === 'level_up' && data?.newLevel >= 33) {
         this.hud.showToast('Uma carta anónima chegou à floricultura... O Subsolo está disponível!', 'book');
@@ -529,19 +548,35 @@ class Game {
 
       // ── Interações no Subsolo ──
       if (this.sceneManager?.isSubsoloActive()) {
-        // Clicar perto da escada de saída → subir
-        const ladderX = 180;
-        const ladderY = 50;
-        if (distance(worldPos.x, worldPos.y, ladderX, ladderY) < 50) {
+        const station = this.subsoloRenderer?.getStationAt(screenX, screenY);
+        if (station === 'ladder') {
           this.sceneManager.startSubir();
           return;
         }
-        // Clicar no dínamo manual → gerar energia
-        const dynamoX = 320;
-        const dynamoY = 260;
-        if (distance(worldPos.x, worldPos.y, dynamoX, dynamoY) < 40) {
-          const gained = state.subsoloManager?.crankManualDynamo();
-          if (gained > 0) this.hud.showToast(`+${gained} energia manual`, 'check');
+        if (station === 'dynamo') {
+          this.subsoloUI?.handleDynamoCrank();
+          return;
+        }
+        if (station === 'cultivo') {
+          this.subsoloUI?.openCultivoModal();
+          return;
+        }
+        if (station === 'secagem') {
+          this.subsoloUI?.openSecagemModal();
+          return;
+        }
+        if (station === 'prep') {
+          this.subsoloUI?.openPrepModal();
+          return;
+        }
+        if (station === 'logistica') {
+          this.subsoloUI?.openLogisticaModal();
+          return;
+        }
+
+        // Clicar no chão para mover o jogador no túnel 2D
+        if (screenY >= 310 && screenY <= 460 && screenX >= 80 && screenX <= 980) {
+          this.player.setTarget(screenX, screenY);
           return;
         }
         return; // restante lógica de clique só na superfície
@@ -1760,6 +1795,21 @@ class Game {
     if (this.sceneManager?.isSubsoloActive()) {
       this.subsoloRenderer?.update(dt);
       state.subsoloManager?.update(dt);
+      this.subsoloUI?.update(dt);
+
+      // Movimento 2D do jogador no chão do túnel
+      if (!this.touchJoystick.active) {
+        let dx = 0;
+        let dy = 0;
+        if (this.activeKeys.has('KeyW') || this.activeKeys.has('ArrowUp')) dy -= 1;
+        if (this.activeKeys.has('KeyS') || this.activeKeys.has('ArrowDown')) dy += 1;
+        if (this.activeKeys.has('KeyA') || this.activeKeys.has('ArrowLeft')) dx -= 1;
+        if (this.activeKeys.has('KeyD') || this.activeKeys.has('ArrowRight')) dx += 1;
+        this.player.setInput(dx, dy);
+      }
+      const speedMult = state.getPlayerSpeedMultiplier();
+      const subsoloBounds = { minX: 110, maxX: 960, minY: 320, maxY: 440 };
+      this.player.update(dt, speedMult, subsoloBounds, null);
       return;
     }
     state.subsoloManager?.update(dt);
@@ -1911,7 +1961,6 @@ class Game {
     if (this.sceneManager?.isSubsoloActive()) {
       this.subsoloRenderer?.render(this.ctx, viewW, viewH);
       this.sceneManager.drawTransitionOverlay(this.ctx, viewW, viewH);
-      this.drawMinimap();
       return;
     }
 

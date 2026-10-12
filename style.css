@@ -6643,3 +6643,360 @@ body.garden-decoration-mode #game-canvas:active {
     display: inline-flex !important;
   }
 }
+
+/* ========================================================
+   SUBSOLO (v2.0.0) — HUD TEMÁTICA E MODAIS DO TÚNEL
+   ======================================================== */
+
+.subsolo-hidden {
+  display: none !important;
+}
+
+.subsolo-hud-layer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.subsolo-hud-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.subsolo-pill {
+  background: #23272A !important;
+  border: 1.5px solid #3E474F !important;
+  color: #E2E8F0 !important;
+  padding: 4px 10px !important;
+  border-radius: 14px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.subsolo-pill:hover {
+  transform: translateY(-1px);
+  border-color: #637381 !important;
+}
+
+.subsolo-respect-pill {
+  background: #2D1B36 !important;
+  border-color: #9333EA !important;
+  color: #D8B4FE !important;
+}
+
+.subsolo-energy-pill.critical-resource,
+.subsolo-water-pill.critical-resource,
+.subsolo-heat-pill.critical-resource {
+  background: #451212 !important;
+  border-color: #EF4444 !important;
+  color: #FCA5A5 !important;
+  animation: pulse-danger 1s infinite alternate;
+}
+
+.subsolo-energy-pill.warning-resource,
+.subsolo-heat-pill.warning-resource {
+  border-color: #F59E0B !important;
+  color: #FCD34D !important;
+}
+
+@keyframes pulse-danger {
+  from { box-shadow: 0 0 2px #EF4444; }
+  to { box-shadow: 0 0 10px #EF4444; }
+}
+
+.subsolo-hud-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.subsolo-btn {
+  background: #1E2327 !important;
+  border: 1.5px solid #3B444C !important;
+  color: #F1F5F9 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.subsolo-btn:hover {
+  background: #2D353C !important;
+  border-color: #556573 !important;
+  transform: translateY(-2px);
+}
+
+.btn-subsolo-exit {
+  background: #143522 !important;
+  border-color: #22C55E !important;
+  color: #86EFAC !important;
+}
+
+.btn-subsolo-exit:hover {
+  background: #166534 !important;
+  border-color: #4ADE80 !important;
+}
+
+/* Modais Temáticos do Subsolo */
+.subsolo-modal-window {
+  background: #1C2024 !important;
+  color: #E2E8F0 !important;
+  border: 2px solid #374151 !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6) !important;
+  max-width: 640px !important;
+  width: 95% !important;
+}
+
+.subsolo-modal-header {
+  border-bottom: 1.5px solid #2D3748 !important;
+  padding-bottom: 12px;
+}
+
+.subsolo-modal-header h2 {
+  color: #F3F4F6 !important;
+  font-size: 18px;
+  margin: 0;
+}
+
+.subsolo-modal-body {
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subsolo-top-bar-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: #252B31;
+  border-radius: 8px;
+}
+
+.subsolo-status-badge {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.subsolo-status-badge.status-good {
+  background: #143522;
+  color: #86EFAC;
+  border: 1px solid #22C55E;
+}
+
+.subsolo-status-badge.status-bad {
+  background: #451212;
+  color: #FCA5A5;
+  border: 1px solid #EF4444;
+}
+
+.subsolo-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.subsolo-card-slot {
+  background: #252B31;
+  border: 1.5px solid #3E474F;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subsolo-card-slot.ready-slot {
+  border-color: #22C55E;
+  background: #1F2E27;
+}
+
+.subsolo-card-slot.disabled-slot {
+  opacity: 0.55;
+}
+
+.slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.slot-tag {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 10px;
+  text-transform: uppercase;
+}
+
+.tag-empty { background: #374151; color: #9CA3AF; }
+.tag-growing { background: #1E3A5F; color: #93C5FD; }
+.tag-ready { background: #14532D; color: #86EFAC; }
+
+.subsolo-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #181C20;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.subsolo-progress-bar .fill {
+  height: 100%;
+  background: linear-gradient(90deg, #9333EA, #3B82F6);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.slot-desc {
+  font-size: 12px;
+  color: #94A3B8;
+  margin: 0;
+}
+
+.slot-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.subsolo-select {
+  background: #181C20;
+  border: 1px solid #475569;
+  color: #F1F5F9;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  flex: 1;
+}
+
+.btn-xs {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #3B82F6;
+  color: #FFFFFF;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-xs:hover { background: #2563EB; }
+
+.btn-sm {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.btn-success {
+  background: #15803D;
+  color: #FFFFFF;
+  border: 1px solid #22C55E;
+}
+
+.btn-success:hover { background: #16A34A; }
+
+.btn-danger {
+  background: #DC2626;
+  color: #FFFFFF;
+  border: 1px solid #EF4444;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-danger:hover { background: #B91C1C; }
+
+/* Secção da bancada */
+.subsolo-bench-status {
+  background: #252B31;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1.5px solid #3E474F;
+}
+
+.subsolo-bench-status.working {
+  border-color: #3B82F6;
+}
+
+.subsolo-bench-status.ready {
+  border-color: #22C55E;
+  background: #172B20;
+}
+
+.subsolo-section-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #E2E8F0;
+  margin: 8px 0 0 0;
+}
+
+/* Secção de logística */
+.subsolo-logistics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.logistics-col {
+  background: #252B31;
+  border: 1.5px solid #3E474F;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.logistics-col h3 {
+  font-size: 14px;
+  margin: 0;
+  color: #F8FAFC;
+}
+
+.col-desc {
+  font-size: 11px;
+  color: #94A3B8;
+  margin: 0;
+}
+
+.stock-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px dashed #333C44;
+}
+
+.subsolo-fiscal-alert {
+  background: #451212;
+  border: 2px solid #EF4444;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+

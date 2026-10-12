@@ -82,10 +82,23 @@ export class SubsoloRenderer {
     // 7. Ratinhos fofos no chão
     this.drawCuteRats(ctx);
 
-    ctx.restore();
+    // 8. Jogador em 2D no túnel
+    if (this.game.player) {
+      const malaCount = (data.mala.ramo || 0) + (data.mala.maco || 0) + (data.mala.reserva || 0);
+      this.game.player.draw(ctx, malaCount, this.manager.getMalaCapacity());
+    }
 
-    // 8. HUD Superior do Subsolo
-    this.drawSubsoloHud(ctx, viewW, data);
+    ctx.restore();
+  }
+
+  getStationAt(x, y) {
+    if (x >= 80 && x <= 160 && y >= 70 && y <= 400) return 'ladder';
+    if (x >= 200 && x <= 330 && y >= 210 && y <= 340) return 'dynamo';
+    if (x >= 390 && x <= 600 && y >= 210 && y <= 350) return 'cultivo';
+    if (x >= 620 && x <= 760 && y >= 210 && y <= 350) return 'secagem';
+    if (x >= 820 && x <= 925 && y >= 210 && y <= 350) return 'prep';
+    if (x >= 926 && x <= 1010 && y >= 210 && y <= 350) return 'logistica';
+    return null;
   }
 
   drawBrickWall(ctx, viewW) {
