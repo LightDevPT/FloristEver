@@ -45,6 +45,7 @@ const ASSETS_TO_CACHE = [
   './js/subsolo/scene-manager.js',
   './js/subsolo/subsolo-state.js',
   './js/subsolo/subsolo-renderer.js',
+  './js/subsolo/subsolo-ui.js',
   './js/subsolo/secret-customer-manager.js',
   './js/save-migrations.mjs',
   './js/state.js',

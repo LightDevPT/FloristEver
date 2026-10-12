@@ -130,6 +130,10 @@ export class SceneManager {
     if (this.game.state) {
       this.game.state.save();
     }
+
+    if (typeof this.onTransitionComplete === 'function') {
+      this.onTransitionComplete(this.currentState);
+    }
   }
 
   /**
@@ -161,6 +165,10 @@ export class SceneManager {
           this.currentState = SCENE_STATES.SUBSOLO;
         } else if (this.currentState === SCENE_STATES.TRANSICAO_SUBIR) {
           this.currentState = SCENE_STATES.SUPERFICIE;
+        }
+
+        if (typeof this.onTransitionComplete === 'function') {
+          this.onTransitionComplete(this.currentState);
         }
       }
     }
