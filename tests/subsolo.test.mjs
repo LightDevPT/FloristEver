@@ -9,7 +9,9 @@ import { GameState } from '../js/state.js';
 import { SceneManager, SCENE_STATES } from '../js/subsolo/scene-manager.js';
 import { SubsoloManager, createDefaultSubsoloState } from '../js/subsolo/subsolo-state.js';
 import { SubsoloRenderer } from '../js/subsolo/subsolo-renderer.js';
-import { SUBSOLO_ENABLED, SUBSOLO_UNLOCK_LEVEL, SUBSOLO_VARIETIES, SUBSOLO_PRODUCTS } from '../js/subsolo/subsolo-config.js';
+import { SUBSOLO_ENABLED, SUBSOLO_UNLOCK_LEVEL, SUBSOLO_VARIETIES, SUBSOLO_PRODUCTS, GARDEN_CODE_DICTIONARY, COUNTERSIGNS, getSeasonalDictionaryVersion } from '../js/subsolo/subsolo-config.js';
+import { DeveloperToolsPanel } from '../js/ui/developer-tools.js';
+import { SecretCustomerManager } from '../js/subsolo/secret-customer-manager.js';
 
 class MemoryStorage {
   values = new Map();
@@ -327,4 +329,75 @@ test('full underground production pipeline: plant -> harvest -> dry -> prep -> m
   assert.ok(state.coins > walletCoins);
   assert.equal(manager.data.cofre.ramo, cofreInitial);
 });
+
+test('developer tools subsolo shortcuts unlock and fill underground resources', () => {
+  const state = new GameState();
+  state.level = 1;
+  state.coins = 20;
+
+  const mockHud = { showToast: () => {}, update: () => {} };
+  const mockGame = {
+    counter: { x: 100, y: 170 },
+    secretCustomerManager: null,
+    sceneManager: {
+      desceu: false,
+      startDescer() { this.desceu = true; }
+    }
+  };
+  mockGame.secretCustomerManager = new SecretCustomerManager(mockGame, state.subsoloManager);
+
+  const devTools = new DeveloperToolsPanel(state, mockHud, () => ({ roles: ['developer'] }), mockGame);
+
+  // 1. Desbloqueio direto via ferramentas de dev
+  devTools.unlockSubsolo();
+  assert.ok(state.level >= 33, 'Nível promovido para o limiar do subsolo (33)');
+  assert.equal(state.subsolo.conteudoSecreto.ativo, true);
+  assert.equal(state.subsolo.conteudoSecreto.consentimento, true);
+  assert.equal(state.subsolo.concessaoPaga, true);
+  assert.equal(state.subsolo.desbloqueado, true);
+  assert.equal(state.subsoloManager.isUnlocked(), true);
+  assert.equal(state.subsoloManager.canAccessGrate(), true);
+
+  // 2. Abastecimento de recursos
+  devTools.fillSubsolo();
+  assert.equal(state.subsolo.recursos.energia, 100);
+  assert.equal(state.subsolo.recursos.agua, 100);
+  assert.equal(state.subsolo.recursos.combustivel, 100);
+  assert.ok(state.subsolo.armazemOculto.folhasSecas >= 30);
+  assert.ok(state.subsolo.mala.ramo >= 5);
+  assert.ok(state.subsolo.cofre.ramo >= 5);
+
+  // 3. Invocar cliente secreto
+  devTools.spawnSecretCustomer();
+  assert.ok(mockGame.secretCustomerManager.activeCustomer, 'Cliente secreto instanciado');
+  assert.equal(mockGame.secretCustomerManager.activeCustomer.state, 'waiting');
+  assert.ok(mockGame.secretCustomerManager.activeCustomer.order.productId);
+
+  // 4. Descer ao subsolo
+  devTools.enterSubsolo();
+  assert.equal(mockGame.sceneManager.desceu, true);
+});
+
+test('caderno de codigos dictionary tracking and access rules', () => {
+  // Dicionário e contrasinais íntegros
+  assert.ok(GARDEN_CODE_DICTIONARY.length >= 8);
+  assert.ok(COUNTERSIGNS.length >= 3);
+  assert.ok(COUNTERSIGNS.every((cs) => cs.prompt && cs.correct && cs.distractors.length === 2));
+
+  // Versão rotativa quinzenal
+  const v1 = getSeasonalDictionaryVersion(1000);
+  const v2 = getSeasonalDictionaryVersion(1000 + 14 * 24 * 60 * 60 * 1000);
+  assert.ok(v1 >= 1 && v1 <= 4);
+  assert.ok(v2 >= 1 && v2 <= 4);
+
+  // Descoberta progressiva no save
+  const state = new GameState();
+  state.subsolo.caderno.paginasDescobertas = ['code_ramo_1'];
+  assert.ok(state.subsolo.caderno.paginasDescobertas.includes('code_ramo_1'));
+
+  // Novo código descoberto após interação
+  state.subsolo.caderno.paginasDescobertas.push('code_maco_1');
+  assert.equal(state.subsolo.caderno.paginasDescobertas.length, 2);
+});
+
 

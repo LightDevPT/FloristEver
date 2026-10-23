@@ -4,6 +4,12 @@ import { UPGRADES_CONFIG } from '../config/upgrades.js';
 import { CUSTOMER_CONFIG } from '../config/customers.js';
 import { formatNumber, PALETTE, getCanvasPixelRatio } from '../utils.js';
 import { getIcon } from '../icons.js';
+import {
+  GARDEN_CODE_DICTIONARY,
+  COUNTERSIGNS,
+  SUBSOLO_PRODUCTS,
+  getSeasonalDictionaryVersion
+} from '../subsolo/subsolo-config.js';
 
 export class BouquetUi {
   constructor(state, sound, hud, particles) {
@@ -93,16 +99,22 @@ export class BouquetUi {
     pageButtons.forEach((button, index) => {
       button.addEventListener('click', () => this.turnBookTo(index));
     });
-    document.getElementById('book-prev-page')?.addEventListener('click', () => this.turnBookTo(0));
-    document.getElementById('book-next-page')?.addEventListener('click', () => this.turnBookTo(1));
+    document.getElementById('book-prev-page')?.addEventListener('click', () => {
+      if (this.bookPageIndex > 0) this.turnBookTo(this.bookPageIndex - 1);
+    });
+    document.getElementById('book-next-page')?.addEventListener('click', () => {
+      const maxPage = this.hasCadernoAccess() ? 2 : 1;
+      if (this.bookPageIndex < maxPage) this.turnBookTo(this.bookPageIndex + 1);
+    });
     window.addEventListener('keydown', (event) => {
       if (!this.modalBook || this.modalBook.classList.contains('hidden')) return;
-      if (event.key === 'ArrowRight') {
+      const maxPage = this.hasCadernoAccess() ? 2 : 1;
+      if (event.key === 'ArrowRight' && this.bookPageIndex < maxPage) {
         event.preventDefault();
-        this.turnBookTo(1);
-      } else if (event.key === 'ArrowLeft') {
+        this.turnBookTo(this.bookPageIndex + 1);
+      } else if (event.key === 'ArrowLeft' && this.bookPageIndex > 0) {
         event.preventDefault();
-        this.turnBookTo(0);
+        this.turnBookTo(this.bookPageIndex - 1);
       }
     });
 
@@ -112,6 +124,13 @@ export class BouquetUi {
     }
 
     this.renderSelectors();
+  }
+
+  hasCadernoAccess() {
+    return Boolean(
+      this.state.subsoloManager?.isUnlocked() &&
+      !this.state.subsolo?.conteudoSecreto?.modoDiscreto
+    );
   }
 
   openBouquetModal() {
@@ -132,7 +151,8 @@ export class BouquetUi {
   }
 
   turnBookTo(pageIndex) {
-    if (this.bookTurning || pageIndex === this.bookPageIndex || ![0, 1].includes(pageIndex)) return;
+    const maxPage = this.hasCadernoAccess() ? 2 : 1;
+    if (this.bookTurning || pageIndex === this.bookPageIndex || pageIndex < 0 || pageIndex > maxPage) return;
     const page = document.getElementById('book-page');
     if (!page) return;
     this.bookTurning = true;
@@ -152,30 +172,118 @@ export class BouquetUi {
   }
 
   updateBookPage() {
-    const selectedTab = this.bookPageIndex === 0 ? 'tab-orders' : 'tab-collection';
+    const hasCaderno = this.hasCadernoAccess();
+    const cadernoTabBtn = document.getElementById('book-tab-caderno-btn');
+    if (cadernoTabBtn) {
+      cadernoTabBtn.classList.toggle('hidden', !hasCaderno);
+    }
+    if (!hasCaderno && this.bookPageIndex > 1) {
+      this.bookPageIndex = 1;
+    }
+
+    const tabs = ['tab-orders', 'tab-collection', 'tab-caderno'];
+    const selectedTab = tabs[this.bookPageIndex] || 'tab-orders';
     const page = document.getElementById('book-page');
     const kicker = document.getElementById('book-page-kicker');
     const counter = document.getElementById('book-page-counter');
     const previous = document.getElementById('book-prev-page');
     const next = document.getElementById('book-next-page');
+
     document.querySelectorAll('#modal-book .book-index-link').forEach((button, index) => {
       const active = index === this.bookPageIndex;
       button.classList.toggle('active', active);
       if (active) button.setAttribute('aria-current', 'page');
       else button.removeAttribute('aria-current');
     });
+
     document.querySelectorAll('#modal-book .tab-pane').forEach((pane) => {
       const active = pane.id === selectedTab;
       pane.classList.toggle('active', active);
+      pane.classList.toggle('hidden', !active);
       pane.setAttribute('aria-hidden', String(!active));
     });
-    if (kicker) kicker.textContent = this.bookPageIndex === 0 ? 'CAPÍTULO I' : 'CAPÍTULO II';
-    if (counter) counter.textContent = this.bookPageIndex === 0 ? '01 / 02' : '02 / 02';
+
+    const totalPages = hasCaderno ? 3 : 2;
+    const kickers = ['CAPÍTULO I', 'CAPÍTULO II', 'APÊNDICE SECRETO'];
+    if (kicker) kicker.textContent = kickers[this.bookPageIndex] || 'CAPÍTULO I';
+    if (counter) counter.textContent = `0${this.bookPageIndex + 1} / 0${totalPages}`;
     if (previous) previous.disabled = this.bookPageIndex === 0;
-    if (next) next.disabled = this.bookPageIndex === 1;
-    if (page) page.setAttribute('aria-label', this.bookPageIndex === 0
-      ? 'Página 1: Encomendas especiais'
-      : 'Página 2: Herbário de ramos');
+    if (next) next.disabled = this.bookPageIndex >= totalPages - 1;
+
+    const pageLabels = [
+      'Página 1: Encomendas especiais',
+      'Página 2: Herbário de ramos',
+      'Página 3: Caderno de Códigos'
+    ];
+    if (page) page.setAttribute('aria-label', pageLabels[this.bookPageIndex] || 'Página do livro');
+
+    if (this.bookPageIndex === 2) {
+      this.renderCaderno();
+    }
+  }
+
+  renderCaderno() {
+    const listEl = document.getElementById('caderno-codes-list');
+    const countEl = document.getElementById('caderno-discovered-count');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    const discoveredIds = new Set(this.state.subsolo?.caderno?.paginasDescobertas || []);
+    if (countEl) {
+      countEl.textContent = `${discoveredIds.size}/${GARDEN_CODE_DICTIONARY.length}`;
+    }
+
+    GARDEN_CODE_DICTIONARY.forEach((code) => {
+      const isDiscovered = discoveredIds.has(code.id);
+      const card = document.createElement('div');
+      card.className = `caderno-code-card ${isDiscovered ? 'is-discovered' : 'is-locked'}`;
+
+      if (isDiscovered) {
+        let meaning = '';
+        if (code.productId) {
+          const p = SUBSOLO_PRODUCTS[code.productId];
+          meaning = `${code.quantity || 1}x ${p?.name || code.productId}`;
+        } else if (code.varietyId) {
+          meaning = `Variedade: ${code.varietyId === 'luar_roxo' ? 'Luar Roxo' : 'Âmbar Seco'}`;
+        } else if (code.minQuality) {
+          meaning = `Qualidade mínima: ★${code.minQuality}`;
+        } else if (code.urgent) {
+          meaning = 'Pedido Urgente (+15% gorjeta)';
+        }
+
+        card.innerHTML = `
+          <div class="caderno-code-header">
+            <span class="caderno-code-phrase">"${code.phrase}"</span>
+            <span class="caderno-code-badge">Decifrado</span>
+          </div>
+          <div class="caderno-code-meaning">Significado: <strong>${meaning}</strong></div>
+        `;
+      } else {
+        card.innerHTML = `
+          <div class="caderno-code-header">
+            <span class="caderno-code-phrase" style="color:#7D8994">"???"</span>
+            <span class="caderno-code-badge locked">Bloqueado</span>
+          </div>
+          <div class="caderno-code-meaning" style="color:#6A7782">Atende clientes discretos ao balcão para decifrar este código.</div>
+        `;
+      }
+      listEl.appendChild(card);
+    });
+
+    // Secção de contra-senhas decifradas
+    const countersignSec = document.createElement('div');
+    countersignSec.className = 'caderno-countersigns-section';
+    countersignSec.innerHTML = `<h4 class="caderno-section-title">Contra-senhas Conhecidas</h4>`;
+    COUNTERSIGNS.forEach((cs) => {
+      const row = document.createElement('div');
+      row.className = 'caderno-countersign-card';
+      row.innerHTML = `
+        <div class="cs-prompt">Cliente: <em>"${cs.prompt}"</em></div>
+        <div class="cs-response">Resposta: <strong>"${cs.correct}"</strong></div>
+      `;
+      countersignSec.appendChild(row);
+    });
+    listEl.appendChild(countersignSec);
   }
 
   renderSelectors() {

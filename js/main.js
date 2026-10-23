@@ -159,7 +159,7 @@ class Game {
       }
       this.shopUi.openChallenges();
     };
-    this.developerTools = new DeveloperToolsPanel(state, this.hud, () => this.accountUi?.client.user);
+    this.developerTools = new DeveloperToolsPanel(state, this.hud, () => this.accountUi?.client.user, this);
     this.accountUi = new AccountUi(state, this.hud, {
       disableSync: this.sessionTestMode,
       onAccountChange: () => this.developerTools.refreshAccess()
@@ -1107,6 +1107,18 @@ class Game {
         this.developerTools.refreshAccess();
         this.openSettingsPanel('general');
       });
+
+      const devBtn = document.getElementById('btn-open-dev-tools');
+      if (devBtn) {
+        devBtn.addEventListener('click', () => {
+          soundManager.playClick();
+          this.developerTools.refreshAccess();
+          this.openSettingsPanel('system');
+          setTimeout(() => {
+            document.getElementById('developer-tools-panel')?.scrollIntoView({ behavior: 'smooth' });
+          }, 50);
+        });
+      }
 
       modalSettings.addEventListener('click', (e) => {
         if (e.target.closest('[data-close]') || e.target === modalSettings) {
@@ -3382,10 +3394,21 @@ class Game {
 }
 
 // Inicia o jogo imediatamente (scripts type="module" são deferred por defeito)
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    window.floristGame = new Game();
-  });
-} else {
+function initGameInstance() {
   window.floristGame = new Game();
+  window.game = window.floristGame;
+  window.subsoloDev = {
+    unlock: () => window.floristGame?.developerTools?.unlockSubsolo(),
+    enter: () => window.floristGame?.developerTools?.enterSubsolo(),
+    exit: () => window.floristGame?.developerTools?.exitSubsolo(),
+    fill: () => window.floristGame?.developerTools?.fillSubsolo(),
+    customer: () => window.floristGame?.developerTools?.spawnSecretCustomer(),
+    fiscal: () => window.floristGame?.developerTools?.triggerFiscal()
+  };
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initGameInstance);
+} else {
+  initGameInstance();
 }

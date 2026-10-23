@@ -528,4 +528,24 @@ export class SubsoloUI {
       this.updateHud();
     }
   }
+
+  handleDynamoCrank() {
+    const gained = this.manager.crankManualDynamo();
+    if (gained > 0) {
+      if (this.game.soundManager) this.game.soundManager.playClick?.();
+      this.game.hud?.showToast(`+${gained} energia gerada no dínamo manual!`, 'check');
+      this.updateHud();
+      if (this.modalCultivo && !this.modalCultivo.classList.contains('hidden')) {
+        this.renderCultivoModalContent();
+      }
+    }
+  }
+
+  handleSubir() {
+    this.closeAllSubsoloModals();
+    if (this.game.sceneManager) {
+      this.game.sceneManager.startSubir();
+    }
+  }
 }
+
