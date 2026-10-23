@@ -113,6 +113,10 @@
         <button id="btn-open-settings" class="btn-hud btn-bounce" title="Definições do Jogo" aria-label="Configurações do jogo">
           <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19.4 13a7.8 7.8 0 0 0 0-2l2-1.5-2-3.5-2.4 1a7.8 7.8 0 0 0-1.7-1L15 3h-4l-.4 2.9a7.8 7.8 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7.8 7.8 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7.8 7.8 0 0 0 1.7 1L11 21h4l.4-2.9a7.8 7.8 0 0 0 1.7-1l2.4 1 2-3.5-2.1-1.6Z" fill="#F7C948" stroke="#2F5D4A" stroke-width="1.7" stroke-linejoin="round"/><circle cx="13" cy="12" r="3" fill="#FFF6E5" stroke="#2F5D4A" stroke-width="1.7"/></svg></span>
         </button>
+        <button id="btn-open-dev-tools" class="btn-hud btn-bounce hidden" type="button" title="Ferramentas de Desenvolvimento e Subsolo" aria-label="Ferramentas de desenvolvimento">
+          <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.9 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" fill="#B56BFF" stroke="#2F5D4A" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+          <span class="btn-label">Dev</span>
+        </button>
         </div>
       </div>
       <div id="hud-world-status" class="world-status" aria-live="polite" aria-label="Estado do jardim">
@@ -460,6 +464,9 @@
                 <button class="book-index-link" type="button" data-tab="tab-collection">
                   <span>02</span><span>Herbário de ramos</span><span class="book-index-dots"></span>
                 </button>
+                <button id="book-tab-caderno-btn" class="book-index-link hidden" type="button" data-tab="tab-caderno">
+                  <span>03</span><span>Caderno secreto</span><span class="book-index-dots"></span>
+                </button>
               </nav>
               <p class="book-index-note">Cada ramo novo deixa uma lembrança nestas páginas.</p>
             </aside>
@@ -548,6 +555,30 @@
                     <h4 class="book-collection-heading">Ramos catalogados</h4>
                   <div id="recipes-collection-grid" class="recipes-grid">
                     <!-- Coleção de combinações descobertas -->
+                  </div>
+                </div>
+                <div class="tab-pane hidden" id="tab-caderno" aria-hidden="true">
+                  <div class="book-page-title-row">
+                    <span class="book-chapter-seal" aria-hidden="true">
+                      <svg viewBox="0 0 36 36" fill="none">
+                        <rect x="7" y="6" width="22" height="24" rx="4" fill="#23272B" stroke="#B56BFF" stroke-width="1.6"/>
+                        <path d="M12 12H24M12 17H24M12 22H18" stroke="#E5E8EB" stroke-width="1.5" stroke-linecap="round"/>
+                        <circle cx="22" cy="22" r="3" fill="#B56BFF"/>
+                      </svg>
+                    </span>
+                    <div>
+                      <span class="book-page-eyebrow" style="color:#B56BFF">ANOTAÇÕES DO SUBSOLO</span>
+                      <h3 class="book-page-title">Caderno de Códigos</h3>
+                    </div>
+                  </div>
+                  <p class="book-page-subtitle">Dicionário de jardim secreto e contra-senhas decifradas dos clientes em código.</p>
+                  <div class="caderno-stats-banner">
+                    <span>Versão da Estação: <strong>Quinzenal</strong></span>
+                    <span>Códigos Catalogados: <strong id="caderno-discovered-count">0/0</strong></span>
+                    <span id="caderno-status-badge" class="caderno-badge">Ativo</span>
+                  </div>
+                  <div id="caderno-codes-list" class="caderno-codes-grid">
+                    <!-- Gerado dinamicamente por bouquet.js -->
                   </div>
                 </div>
                 <footer class="book-page-footer">

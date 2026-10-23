@@ -90,23 +90,36 @@ export function applyLocalFullTestProfile(state) {
 }
 
 export class DeveloperToolsPanel {
-  constructor(state, hud, getUser) {
+  constructor(state, hud, getUser, game = null) {
     this.state = state;
     this.hud = hud;
     this.getUser = getUser;
-    this.panel = document.getElementById('developer-tools-panel');
+    this.game = game || (typeof window !== 'undefined' ? window.floristGame : null);
+    this.panel = typeof document !== 'undefined' ? document.getElementById('developer-tools-panel') : null;
+    this.quickDevBtn = typeof document !== 'undefined' ? document.getElementById('btn-open-dev-tools') : null;
     this.render();
     this.refreshAccess();
   }
 
   isAuthorized() {
-    const user = this.getUser();
+    if (typeof window !== 'undefined') {
+      const hostname = window.location?.hostname;
+      const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+      const hasDevFlag = window.location?.search?.includes('dev') || isLocalFullTestMode(window.location);
+      if (isLocalHost || hasDevFlag) return true;
+    }
+    const user = this.getUser?.();
     return Array.isArray(user?.roles) && user.roles.includes('developer');
   }
 
   refreshAccess() {
-    if (!this.panel) return;
-    this.panel.classList.toggle('hidden', !this.isAuthorized());
+    const authorized = this.isAuthorized();
+    if (this.panel) {
+      this.panel.classList.toggle('hidden', !authorized);
+    }
+    if (this.quickDevBtn) {
+      this.quickDevBtn.classList.toggle('hidden', !authorized);
+    }
   }
 
   render() {
@@ -117,9 +130,23 @@ export class DeveloperToolsPanel {
           <span class="developer-tools-eyebrow">ACESSO DE DESENVOLVIMENTO</span>
           <h3 id="developer-tools-title">Painel de desenvolvimento</h3>
         </div>
-        <span class="developer-tools-badge">Conta autorizada</span>
+        <span class="developer-tools-badge">Modo Dev Ativo</span>
       </header>
-      <p class="setting-help">Controlos de teste para o progresso desta conta. As alterações ficam guardadas no teu dispositivo e sincronizam com esta conta quando a sincronização estiver ativa.</p>
+      <p class="setting-help">Controlos de teste para o progresso desta conta e do update Subsolo (v2.0.0). As alterações ficam guardadas no dispositivo.</p>
+      
+      <details class="developer-tools-section" open>
+        <summary>🌿 Subsolo (Update v2.0.0)</summary>
+        <p class="setting-help">Atalhos rápidos para desbloquear e testar todas as funcionalidades subterrâneas.</p>
+        <div class="developer-tools-quick-actions" style="display:flex; flex-wrap:wrap; gap:8px; margin: 10px 0;">
+          <button type="button" class="btn-primary" data-dev-action="unlock-subsolo">🔓 Ativar e Desbloquear Subsolo</button>
+          <button type="button" class="btn-secondary" data-dev-action="enter-subsolo">🚪 Descer ao Subsolo Agora</button>
+          <button type="button" class="btn-secondary" data-dev-action="exit-subsolo">🪜 Subir à Superfície</button>
+          <button type="button" class="btn-secondary" data-dev-action="fill-subsolo">⚡ Abastecer Recursos e Sementes</button>
+          <button type="button" class="btn-secondary" data-dev-action="spawn-secret-customer">👤 Chamar Cliente Secreto</button>
+          <button type="button" class="btn-secondary" data-dev-action="trigger-fiscal">🚨 Simular Fiscal / Ocultar Cofre</button>
+        </div>
+      </details>
+
       <details class="developer-tools-section" open>
         <summary>Moedas e progressão</summary>
         <div class="developer-tools-grid">
@@ -288,10 +315,93 @@ export class DeveloperToolsPanel {
       else if (action === 'unlock-all') this.unlockAll();
       else if (action === 'complete-orders') this.completeOrders();
       else if (action === 'add-coins') this.state.addCoins(this.readNumber('[data-dev-value="coinGrant"]', { min: 1 }));
+      else if (action === 'unlock-subsolo') this.unlockSubsolo();
+      else if (action === 'enter-subsolo') this.enterSubsolo();
+      else if (action === 'exit-subsolo') this.exitSubsolo();
+      else if (action === 'fill-subsolo') this.fillSubsolo();
+      else if (action === 'spawn-secret-customer') this.spawnSecretCustomer();
+      else if (action === 'trigger-fiscal') this.triggerFiscal();
       else return;
       this.persistAndRefresh('Alterações de desenvolvimento guardadas.');
     } catch (error) {
       this.setStatus(error.message, true);
+    }
+  }
+
+  unlockSubsolo() {
+    this.state.level = Math.max(this.state.level, 33);
+    this.state.coins = Math.max(this.state.coins, 500000);
+    this.state.subsolo.conteudoSecreto.ativo = true;
+    this.state.subsolo.conteudoSecreto.consentimento = true;
+    this.state.subsolo.concessaoPaga = true;
+    this.state.subsolo.desbloqueado = true;
+    this.state.subsolo.conteudoSecreto.modoDiscreto = false;
+    if (this.state.subsoloManager) {
+      this.state.subsoloManager.data.respeito.nivel = Math.max(this.state.subsoloManager.data.respeito.nivel, 5);
+    }
+    this.hud?.showToast?.('Subsolo desbloqueado! Grelha disponível atrás da loja.', 'check');
+  }
+
+  enterSubsolo() {
+    this.unlockSubsolo();
+    const game = this.game || (typeof window !== 'undefined' ? window.floristGame : null);
+    if (game?.sceneManager) {
+      if (typeof document !== 'undefined') document.getElementById('modal-settings')?.classList.add('hidden');
+      game.sceneManager.startDescer();
+      this.hud?.showToast?.('A descer para o Subsolo...', 'sprout');
+    }
+  }
+
+  exitSubsolo() {
+    const game = this.game || (typeof window !== 'undefined' ? window.floristGame : null);
+    if (game?.sceneManager) {
+      if (typeof document !== 'undefined') document.getElementById('modal-settings')?.classList.add('hidden');
+      game.sceneManager.startSubir();
+      this.hud?.showToast?.('A subir para a superfície...', 'flower');
+    }
+  }
+
+  fillSubsolo() {
+    this.unlockSubsolo();
+    const sub = this.state.subsoloManager;
+    if (!sub) return;
+    sub.data.recursos.energia = 100;
+    sub.data.recursos.agua = 100;
+    sub.data.recursos.combustivel = 100;
+    sub.data.recursos.odor = 5;
+    sub.data.armazemOculto.folhasSecas = Math.max(sub.data.armazemOculto.folhasSecas, 30);
+    sub.data.armazemOculto.ramo = Math.max(sub.data.armazemOculto.ramo, 10);
+    sub.data.armazemOculto.maco = Math.max(sub.data.armazemOculto.maco, 5);
+    sub.data.armazemOculto.reserva = Math.max(sub.data.armazemOculto.reserva, 2);
+    sub.data.mala.ramo = Math.max(sub.data.mala.ramo, 5);
+    sub.data.cofre.ramo = Math.max(sub.data.cofre.ramo, 5);
+    sub.data.cofre.maco = Math.max(sub.data.cofre.maco, 2);
+    this.hud?.showToast?.('Recursos, sementes, armazém e cofre abastecidos!', 'check');
+  }
+
+  spawnSecretCustomer() {
+    this.unlockSubsolo();
+    const game = this.game || (typeof window !== 'undefined' ? window.floristGame : null);
+    if (game?.secretCustomerManager) {
+      if (typeof document !== 'undefined') document.getElementById('modal-settings')?.classList.add('hidden');
+      game.secretCustomerManager.spawnSecretCustomer();
+      if (game.secretCustomerManager.activeCustomer) {
+        game.secretCustomerManager.activeCustomer.x = game.counter.x + 30;
+        game.secretCustomerManager.activeCustomer.y = game.counter.y + 40;
+        game.secretCustomerManager.activeCustomer.state = 'waiting';
+      }
+      this.hud?.showToast?.('Cliente secreto apareceu ao balcão!', 'book');
+    }
+  }
+
+  triggerFiscal() {
+    this.unlockSubsolo();
+    const sub = this.state.subsoloManager;
+    if (sub) {
+      if (typeof document !== 'undefined') document.getElementById('modal-settings')?.classList.add('hidden');
+      sub.data.calor.valor = 95;
+      sub.startFiscalInspection();
+      this.hud?.showToast?.('🚨 Fiscal a aproximar-se! Oculta o cofre no balcão!', 'lock');
     }
   }
 
