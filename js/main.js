@@ -185,6 +185,10 @@ class Game {
     this.cachedPathPlots = null;
     this.cachedPathPlotCount = -1;
     this.cachedPathSegments = null;
+    this.cachedLongTermProjects = this.state.getLongTermProjects();
+    this.cachedTreePlotSource = null;
+    this.cachedTreePlotCount = -1;
+    this.treesOverlappingPlots = new Set();
 
     // Dimensões do mapa do jogo
     this.mapBounds = {
@@ -520,34 +524,14 @@ class Game {
       const screenX = e.clientX - rect.left;
       const screenY = e.clientY - rect.top;
 
-      // Converte coordenadas de ecrã para o mundo
-      const worldPos = this.screenToWorld(screenX, screenY);
-
-      if (this.decorationMode) {
-        const movableIndices = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
-        const nearest = movableIndices
-          .map((index) => ({ index, decor: this.mapDecor[index] }))
-          .map((entry) => ({
-            ...entry,
-            distance: distance(worldPos.x, worldPos.y, entry.decor.x, entry.decor.y)
-          }))
-          .filter((entry) => entry.distance < 85)
-          .sort((first, second) => first.distance - second.distance)[0];
-        if (nearest) {
-          this.decorationDrag = {
-            index: nearest.index,
-            original: { x: nearest.decor.x, y: nearest.decor.y },
-            pointerId: e.pointerId
-          };
-          this.canvas.setPointerCapture(e.pointerId);
-        } else {
-          this.hud.showToast('Arrasta um elemento decorativo para o reposicionar.', 'sprout');
-        }
-        return;
-      }
-
-      // ── Interações no Subsolo ──
+      // ── Interações Exclusivas no Subsolo ──
+      // Se estiver no Subsolo, bloqueia todos os controlos e cliques de superfície
       if (this.sceneManager?.isSubsoloActive()) {
+        if (this.decorationMode) {
+          this.decorationMode = false;
+          document.body.classList.remove('garden-decoration-mode');
+        }
+
         const station = this.subsoloRenderer?.getStationAt(screenX, screenY);
         if (station === 'ladder') {
           this.sceneManager.startSubir();
@@ -574,12 +558,38 @@ class Game {
           return;
         }
 
-        // Clicar no chão para mover o jogador no túnel 2D
+        // Clicar no chão para mover o jogador no túnel 2D (apenas dentro dos limites do túnel)
         if (screenY >= 310 && screenY <= 460 && screenX >= 80 && screenX <= 980) {
           this.player.setTarget(screenX, screenY);
           return;
         }
-        return; // restante lógica de clique só na superfície
+        return; // Nunca processa cliques de terreno de superfície quando no subsolo
+      }
+
+      // Converte coordenadas de ecrã para o mundo
+      const worldPos = this.screenToWorld(screenX, screenY);
+
+      if (this.decorationMode) {
+        const movableIndices = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
+        const nearest = movableIndices
+          .map((index) => ({ index, decor: this.mapDecor[index] }))
+          .map((entry) => ({
+            ...entry,
+            distance: distance(worldPos.x, worldPos.y, entry.decor.x, entry.decor.y)
+          }))
+          .filter((entry) => entry.distance < 85)
+          .sort((first, second) => first.distance - second.distance)[0];
+        if (nearest) {
+          this.decorationDrag = {
+            index: nearest.index,
+            original: { x: nearest.decor.x, y: nearest.decor.y },
+            pointerId: e.pointerId
+          };
+          this.canvas.setPointerCapture(e.pointerId);
+        } else {
+          this.hud.showToast('Arrasta um elemento decorativo para o reposicionar.', 'sprout');
+        }
+        return;
       }
 
       // ── Interações na Superfície com o Subsolo ──
@@ -638,6 +648,7 @@ class Game {
     const minimap = document.getElementById('minimap-canvas');
     const setMapOpen = (isOpen) => {
       if (!mapPanel || !mapToggle) return;
+      if (isOpen && this.sceneManager?.isSubsoloActive()) return;
       mapPanel.classList.toggle('hidden', !isOpen);
       document.body.classList.toggle('map-open', isOpen);
       mapToggle.setAttribute('aria-expanded', String(isOpen));
@@ -659,6 +670,7 @@ class Game {
       }
     });
     minimap?.addEventListener('pointerdown', (e) => {
+      if (this.sceneManager?.isSubsoloActive()) return;
       const rect = minimap.getBoundingClientRect();
       const xRatio = clamp((e.clientX - rect.left - 7) / (rect.width - 14), 0, 1);
       const yRatio = clamp((e.clientY - rect.top - 7) / (rect.height - 14), 0, 1);
@@ -741,6 +753,12 @@ class Game {
   }
 
   handleActionInteraction() {
+    // ── Se o Subsolo estiver ativo, bloqueia controlos do solo e interage com estações subterrâneas ──
+    if (this.sceneManager?.isSubsoloActive()) {
+      this.handleSubsoloActionInteraction();
+      return;
+    }
+
     if (this.player.isSeated) {
       this.player.standUp();
       soundManager.playClick();
@@ -785,6 +803,28 @@ class Game {
     if (distToCounter < 95) {
       const served = this.customerManager.serveWaitingCustomer();
       if (served) return;
+    }
+  }
+
+  /**
+   * Interação por tecla de ação (E / Espaço / Botão Mobile) dentro do Subsolo.
+   * Interage com a estação de trabalho mais próxima ou com a escada de saída.
+   */
+  handleSubsoloActionInteraction() {
+    const px = this.player.x;
+
+    if (px <= 165) {
+      this.sceneManager?.startSubir();
+    } else if (px <= 350) {
+      this.subsoloUI?.handleDynamoCrank();
+    } else if (px <= 610) {
+      this.subsoloUI?.openCultivoModal();
+    } else if (px <= 780) {
+      this.subsoloUI?.openSecagemModal();
+    } else if (px <= 925) {
+      this.subsoloUI?.openPrepModal();
+    } else {
+      this.subsoloUI?.openLogisticaModal();
     }
   }
 
@@ -889,6 +929,7 @@ class Game {
   }
 
   openCompostModal() {
+    if (this.sceneManager?.isSubsoloActive()) return;
     if (!this.compostModal || !this.compostFlowerRows || state.basket.length === 0) return;
 
     const basketCounts = state.basket.reduce((counts, flowerId) => {
@@ -1511,8 +1552,12 @@ class Game {
         status.dataset.type = type;
       };
       const selectedStoreName = () => {
-        const name = storeNameInput?.value.trim().replace(/\s+/g, ' ');
-        if (!name || name.length > 28 || /[\u0000-\u001F\u007F]/.test(name)) {
+        let name = storeNameInput?.value.trim().replace(/\s+/g, ' ');
+        if (!name) {
+          name = state.storeName || 'FloristEver';
+          if (storeNameInput) storeNameInput.value = name;
+        }
+        if (name.length > 28 || /[\u0000-\u001F\u007F]/.test(name)) {
           showStatus('Escreve um nome de loja válido, com até 28 caracteres.');
           storeNameInput?.focus();
           return null;
@@ -1544,8 +1589,29 @@ class Game {
       this.acceptOnboardingTerms = acceptTerms;
       this.finishOnboarding = startGame;
 
-      if (storeNameInput) storeNameInput.value = state.storeName || '';
-      if (hasAcceptedCurrentTerms()) {
+      // Pre-inject a store name for skipOnboarding before state.storeName is read
+      const isSkipOnboarding = typeof window !== 'undefined' && (
+        window.location?.search?.includes('skipOnboarding') ||
+        window.location?.search?.includes('dev=1') ||
+        window.location?.search?.includes('dev') ||
+        window.location?.search?.includes('testMode=full')
+      );
+      if (isSkipOnboarding && (!state.storeName || state.storeName === '')) {
+        state.setStoreName('FloristEver');
+      }
+      if (storeNameInput) storeNameInput.value = state.storeName || 'FloristEver';
+      if (isSkipOnboarding) {
+        if (storeNameInput && !storeNameInput.value) storeNameInput.value = 'FloristEver';
+        if (termsCheckbox) termsCheckbox.checked = true;
+        try {
+          localStorage.setItem(TERMS_ACCEPTANCE_KEY, JSON.stringify({
+            version: TERMS_VERSION,
+            acceptedAt: new Date().toISOString()
+          }));
+          localStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
+        } catch (_) {}
+        startGame();
+      } else if (hasAcceptedCurrentTerms()) {
         try {
           const onboardingCompleted = localStorage.getItem(ONBOARDING_COMPLETED_KEY) === 'true';
           if (onboardingCompleted || this.hasLoadedProgress) {
@@ -1822,6 +1888,18 @@ class Game {
       const speedMult = state.getPlayerSpeedMultiplier();
       const subsoloBounds = { minX: 110, maxX: 960, minY: 320, maxY: 440 };
       this.player.update(dt, speedMult, subsoloBounds, null);
+
+      // Feedback dinâmico de interação com a estação subterrânea mais próxima
+      const px = this.player.x;
+      let promptLabel = '';
+      if (px <= 165) promptLabel = 'Subir para a Floricultura';
+      else if (px <= 350) promptLabel = 'Rodar Dínamo (+15% Energia)';
+      else if (px <= 610) promptLabel = 'Abrir Estufa de Cultivo';
+      else if (px <= 780) promptLabel = 'Abrir Estendais de Secagem';
+      else if (px <= 925) promptLabel = 'Abrir Bancada de Preparação';
+      else promptLabel = 'Abrir Logística e Cofre';
+
+      this.hud?.setInteractionPrompt(Boolean(promptLabel), promptLabel);
       return;
     }
     state.subsoloManager?.update(dt);
@@ -1835,7 +1913,8 @@ class Game {
     }
     state.processPayroll();
     const fieldBounds = this.fieldManager.getMapAreaBounds();
-    const greenhouse = this.state.getLongTermProjects()
+    this.cachedLongTermProjects = this.state.getLongTermProjects();
+    const greenhouse = this.cachedLongTermProjects
       .find((project) => project.zone.id === 'greenhouse')?.zone;
     this.mapBounds.minX = greenhouse ? Math.min(40, greenhouse.x - 340) : 40;
     this.mapBounds.maxX = Math.max(2800, fieldBounds.right + 80);
@@ -2075,14 +2154,33 @@ class Game {
     this.player.draw(this.ctx, state.basket.length, cap);
 
     // 8. Árvores e Elementos de Ambientação
+    if (
+      this.cachedTreePlotSource !== this.state.plots
+      || this.cachedTreePlotCount !== this.state.plots.length
+    ) {
+      const overlappingTrees = new Set();
+      for (const tree of this.trees) {
+        for (const plot of this.state.plots) {
+          const position = this.fieldManager.getPlotWorldPos(plot.gridX, plot.gridY);
+          if (
+            tree.x + 48 >= position.x
+            && tree.x - 48 <= position.x + this.fieldManager.plotWidth
+            && tree.y + 48 >= position.y
+            && tree.y - 48 <= position.y + this.fieldManager.plotHeight
+          ) {
+            overlappingTrees.add(tree);
+            break;
+          }
+        }
+      }
+      this.treesOverlappingPlots = overlappingTrees;
+      this.cachedTreePlotSource = this.state.plots;
+      this.cachedTreePlotCount = this.state.plots.length;
+    }
+
     for (const tree of this.trees) {
       if (!this.isWorldRectVisible(tree.x - 52, tree.y - 52, tree.x + 52, tree.y + 52)) continue;
-      const coversPlot = this.state.plots.some((plot) => {
-        const position = this.fieldManager.getPlotWorldPos(plot.gridX, plot.gridY);
-        return tree.x + 48 >= position.x && tree.x - 48 <= position.x + this.fieldManager.plotWidth
-          && tree.y + 48 >= position.y && tree.y - 48 <= position.y + this.fieldManager.plotHeight;
-      });
-      if (coversPlot) continue;
+      if (this.treesOverlappingPlots.has(tree)) continue;
       assetManager.drawTree(this.ctx, tree.x, tree.y, this.gameTime, themeManager.getTreePalette(tree.x, tree.y));
     }
 
@@ -2178,7 +2276,7 @@ class Game {
     mapPath.lineTo(mapX(roadRightX), mapY(roadBottomY));
     mapPath.lineTo(mapX(roadRightX), mapY(444));
     mapPath.quadraticCurveTo(mapX(roadRightX), mapY(420), mapX(roadRightX + 24), mapY(420));
-    const greenhouse = this.state.getLongTermProjects()
+    const greenhouse = this.cachedLongTermProjects
       .find((project) => project.zone.id === 'greenhouse')?.zone;
     if (greenhouse) {
       mapPath.moveTo(mapX(roadLeftX), mapY(218));
@@ -2267,7 +2365,7 @@ class Game {
       ctx.strokeRect(mapX(position.x), mapY(position.y), mapWidth(this.fieldManager.plotWidth), mapHeight(this.fieldManager.plotHeight));
     }
 
-    for (const project of this.state.getLongTermProjects()) {
+    for (const project of this.cachedLongTermProjects) {
       if (project.zone.id !== 'greenhouse') continue;
       const zone = project.zone;
       ctx.fillStyle = GREENHOUSE_UNDER_CONSTRUCTION ? '#9A8C74' : (project.unlocked ? '#5FA36B' : '#9A8C74');
@@ -2306,7 +2404,7 @@ class Game {
     if (!container) return;
     container.replaceChildren();
 
-    for (const project of this.state.getLongTermProjects()) {
+    for (const project of this.cachedLongTermProjects) {
       if (project.zone.id !== 'greenhouse') continue;
       const destination = document.createElement('div');
       const available = project.unlocked && !GREENHOUSE_UNDER_CONSTRUCTION;
@@ -2405,7 +2503,7 @@ class Game {
     const roadRightX = fieldRight + 24;
     const roadBottomY = fieldBottom + 24;
     const visible = this.visibleWorldBounds;
-    const greenhouse = this.state.getLongTermProjects()
+    const greenhouse = this.cachedLongTermProjects
       .find((project) => project.zone.id === 'greenhouse')?.zone;
 
     const mainPath = new Path2D();
@@ -2482,7 +2580,7 @@ class Game {
   }
 
   renderGreenhouseVegetation() {
-    const greenhouse = this.state.getLongTermProjects()
+    const greenhouse = this.cachedLongTermProjects
       .find((project) => project.zone.id === 'greenhouse')?.zone;
     if (!greenhouse || !this.visibleWorldBounds) return;
     const { x, y } = greenhouse;
@@ -2696,7 +2794,7 @@ class Game {
       height: Math.max(0, this.counter.y - shop.y + 4)
     });
 
-    const greenhouse = this.state.getLongTermProjects()
+    const greenhouse = this.cachedLongTermProjects
       .find((project) => project.zone.id === 'greenhouse')?.zone;
     if (greenhouse) {
       obstacles.push(
@@ -3171,7 +3269,7 @@ class Game {
 
   renderExpansionZones() {
     const ctx = this.ctx;
-    const zones = this.state.getLongTermProjects();
+    const zones = this.cachedLongTermProjects;
     const greenhouse = zones.find((project) => project.zone.id === 'greenhouse');
 
     if (greenhouse) {
@@ -3346,7 +3444,7 @@ class Game {
     for (const zone of this.state.getZoneActivities()) {
       if (zone.id !== 'greenhouse') continue;
       if (GREENHOUSE_UNDER_CONSTRUCTION) continue;
-      const project = this.state.getLongTermProjects().find((entry) => entry.zone.id === zone.id);
+      const project = this.cachedLongTermProjects.find((entry) => entry.zone.id === zone.id);
       if (!project?.unlocked) continue;
       for (const finding of zone.findings) {
         ctx.save();

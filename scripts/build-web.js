@@ -126,7 +126,20 @@ function writeSecurityHeaderFiles() {
   fs.writeFileSync(path.join(DIST, '.htaccess'), `${htaccess}\n`, 'utf8');
 }
 
-fs.rmSync(DIST, { recursive: true, force: true });
+try {
+  fs.rmSync(DIST, { recursive: true, force: true });
+} catch (e) {
+  if (fs.existsSync(DIST)) {
+    const entries = fs.readdirSync(DIST);
+    for (const entry of entries) {
+      try {
+        fs.rmSync(path.join(DIST, entry), { recursive: true, force: true });
+      } catch (err) {
+        // ignore
+      }
+    }
+  }
+}
 fs.mkdirSync(DIST, { recursive: true });
 FILES.forEach((file) => copyFile(file));
 ADDITIONAL_FILES.forEach(({ source, destination }) => copyFile(source, destination));

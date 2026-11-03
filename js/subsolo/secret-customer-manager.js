@@ -10,6 +10,7 @@ import {
   SUBSOLO_PRODUCTS
 } from './subsolo-config.js';
 import { distance, PALETTE } from '../utils.js';
+import { ICONS } from '../icons.js';
 
 export class SecretCustomerManager {
   constructor(game, subsoloManager) {
@@ -137,24 +138,31 @@ export class SecretCustomerManager {
       document.body.appendChild(modal);
     }
 
+    const estRevenue = Math.round(prodConfig.baseValue * order.quantity * Math.min(1.4, 1 + 0.02 * (this.subsolo.data.respeito.nivel - 1)));
+
     modal.innerHTML = `
-      <div class="modal-card secret-trade-card" style="max-width: 440px; background: #23272B; color: #E5E8EB; border: 2px solid #5A6670; border-radius: 12px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <h3 style="margin: 0; color: #FFC857; display: flex; align-items: center; gap: 8px;">
-            <span>🧥</span> Cliente em Código
-          </h3>
-          <button type="button" id="btn-close-secret-trade" class="btn-close-modal" style="background: none; border: none; color: #99A8B2; font-size: 20px; cursor: pointer;">✕</button>
+      <div class="modal-card secret-trade-card">
+        <div class="secret-trade-header">
+          <div class="secret-header-title">
+            <span class="trenchcoat-icon">${ICONS.subsoloTrenchcoat}</span>
+            <div>
+              <h3>Cliente em Código</h3>
+              <span class="clandestine-badge">Transação Secreta</span>
+            </div>
+          </div>
+          <button type="button" id="btn-close-secret-trade" class="btn-close-modal" aria-label="Fechar">✕</button>
         </div>
 
-        <div style="background: #191C1E; border-left: 4px solid #B56BFF; padding: 10px 14px; border-radius: 4px; margin-bottom: 14px;">
-          <p style="margin: 0; font-style: italic; font-size: 14px; color: #F0F4F8;">"${order.phrase}"</p>
-          ${assist ? `<p style="margin: 6px 0 0; font-size: 11px; color: #68D67F; font-weight: bold;">(Ajuda: pede ${order.quantity}x ${prodConfig.name})</p>` : ''}
+        <div class="secret-trade-quote-box">
+          <span class="transmission-label">TRANSMISSÃO INTERCETADA:</span>
+          <div class="quote-text">"${order.phrase}"</div>
+          ${assist ? `<div class="quote-assist-pill">${ICONS.subsoloDev} <span>Pedido decifrado: <strong>${order.quantity}x ${prodConfig.name}</strong></span></div>` : ''}
         </div>
 
         ${countersign ? `
-          <div style="margin-bottom: 12px;">
-            <label style="font-size: 12px; color: #A0B0BC; display: block; margin-bottom: 4px;">Contra-senha de resposta:</label>
-            <select id="secret-trade-countersign" style="width: 100%; padding: 8px; background: #2E343A; color: #FFF; border: 1px solid #4A5660; border-radius: 6px;">
+          <div class="secret-trade-field">
+            <label for="secret-trade-countersign" class="field-label">Contra-senha de resposta segura:</label>
+            <select id="secret-trade-countersign" class="subsolo-select">
               <option value="correct">${countersign.correct}</option>
               <option value="wrong1">${countersign.distractors[0]}</option>
               <option value="wrong2">${countersign.distractors[1]}</option>
@@ -162,24 +170,32 @@ export class SecretCustomerManager {
           </div>
         ` : ''}
 
-        <div style="margin-bottom: 14px;">
-          <label style="font-size: 12px; color: #A0B0BC; display: block; margin-bottom: 4px;">Tipo de embalagem discreta:</label>
-          <select id="secret-trade-packaging" style="width: 100%; padding: 8px; background: #2E343A; color: #FFF; border: 1px solid #4A5660; border-radius: 6px;">
-            ${PACKAGING_OPTIONS.map((p) => `<option value="${p.id}">${p.label} (${p.desc})</option>`).join('')}
+        <div class="secret-trade-field">
+          <label for="secret-trade-packaging" class="field-label">Método de camuflagem / embalagem:</label>
+          <select id="secret-trade-packaging" class="subsolo-select">
+            ${PACKAGING_OPTIONS.map((p) => `<option value="${p.id}">${p.label} — ${p.desc}</option>`).join('')}
           </select>
         </div>
 
-        <div style="background: #1E2225; padding: 10px; border-radius: 6px; margin-bottom: 14px; font-size: 12px; display: flex; justify-content: space-between;">
-          <span>Stock no Cofre: <strong>${inCofre}</strong> / ${order.quantity} necessários</span>
-          <span style="color: ${canAffordStock ? '#5DE27F' : '#E85D5D'}; font-weight: bold;">${canAffordStock ? 'Disponível' : 'Cofre Vazio'}</span>
+        <div class="secret-trade-stock-bar ${canAffordStock ? 'stock-ok' : 'stock-empty'}">
+          <div class="stock-info">
+            <span class="stock-title">${ICONS.subsoloLogistica} Stock no Cofre da Loja:</span>
+            <strong class="stock-count">${inCofre} / ${order.quantity} un.</strong>
+          </div>
+          <span class="stock-status-pill">${canAffordStock ? `${ICONS.check} Pronto p/ Venda` : `${ICONS.close} Esgotado no Cofre`}</span>
         </div>
 
-        <div style="display: flex; gap: 10px;">
-          <button type="button" id="btn-submit-secret-trade" class="btn-primary" style="flex: 1; padding: 10px; font-weight: bold;" ${!canAffordStock ? 'disabled' : ''}>
-            Entregar e Cobrar
+        <div class="secret-trade-reward-banner">
+          <span>Recompensa Estimada:</span>
+          <strong class="reward-val">~${estRevenue}🪙 +15 XP Respeito</strong>
+        </div>
+
+        <div class="secret-trade-actions">
+          <button type="button" id="btn-submit-secret-trade" class="btn-primary btn-secret-submit btn-bounce" ${!canAffordStock ? 'disabled' : ''}>
+            ${ICONS.check} Concluir Transação
           </button>
-          <button type="button" id="btn-dismiss-secret-trade" class="btn-secondary" style="padding: 10px;">
-            Pedir p/ Voltar Mais Tarde
+          <button type="button" id="btn-dismiss-secret-trade" class="btn-secondary btn-secret-dismiss">
+            ${ICONS.close} Despachar Cliente
           </button>
         </div>
       </div>

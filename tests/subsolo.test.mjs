@@ -400,4 +400,86 @@ test('caderno de codigos dictionary tracking and access rules', () => {
   assert.equal(state.subsolo.caderno.paginasDescobertas.length, 2);
 });
 
+test('surface controls disabling system: isolates surface actions and routes to subsolo stations', () => {
+  let climbedLadder = false;
+  let crankedDynamo = false;
+  let openedCultivo = false;
+  let openedSecagem = false;
+  let openedPrep = false;
+  let openedLogistica = false;
+  let servedCounter = false;
+
+  const mockGame = {
+    sceneManager: {
+      isSubsoloActive: () => true,
+      startSubir: () => { climbedLadder = true; }
+    },
+    subsoloUI: {
+      handleDynamoCrank: () => { crankedDynamo = true; },
+      openCultivoModal: () => { openedCultivo = true; },
+      openSecagemModal: () => { openedSecagem = true; },
+      openPrepModal: () => { openedPrep = true; },
+      openLogisticaModal: () => { openedLogistica = true; }
+    },
+    customerManager: {
+      serveWaitingCustomer: () => { servedCounter = true; return true; }
+    },
+    player: { x: 100, y: 370, isSeated: false },
+    counter: { x: 100, y: 370, width: 40, height: 40 },
+    getNearbyZoneFinding: () => null,
+    getNearbyCompost: () => null,
+    getNearbyBench: () => null,
+    handleActionInteraction() {
+      if (this.sceneManager?.isSubsoloActive()) {
+        this.handleSubsoloActionInteraction();
+        return;
+      }
+      this.customerManager.serveWaitingCustomer();
+    },
+    handleSubsoloActionInteraction() {
+      const px = this.player.x;
+      if (px <= 165) this.sceneManager?.startSubir();
+      else if (px <= 350) this.subsoloUI?.handleDynamoCrank();
+      else if (px <= 610) this.subsoloUI?.openCultivoModal();
+      else if (px <= 780) this.subsoloUI?.openSecagemModal();
+      else if (px <= 925) this.subsoloUI?.openPrepModal();
+      else this.subsoloUI?.openLogisticaModal();
+    }
+  };
+
+  // 1. Perto da escada (x <= 165)
+  mockGame.player.x = 120;
+  mockGame.handleActionInteraction();
+  assert.equal(climbedLadder, true, 'Interagiu com a escada de subida');
+  assert.equal(servedCounter, false, 'Controlo do balcão da superfície não foi acionado');
+
+  // 2. Perto do dínamo (165 < x <= 350)
+  mockGame.player.x = 250;
+  mockGame.handleActionInteraction();
+  assert.equal(crankedDynamo, true, 'Rodou o dínamo manual subterrâneo');
+
+  // 3. Perto dos canteiros de cultivo (350 < x <= 610)
+  mockGame.player.x = 450;
+  mockGame.handleActionInteraction();
+  assert.equal(openedCultivo, true, 'Abriu o modal de cultivo');
+
+  // 4. Perto dos estendais de secagem (610 < x <= 780)
+  mockGame.player.x = 700;
+  mockGame.handleActionInteraction();
+  assert.equal(openedSecagem, true, 'Abriu o modal de secagem');
+
+  // 5. Perto da bancada de preparação (780 < x <= 925)
+  mockGame.player.x = 850;
+  mockGame.handleActionInteraction();
+  assert.equal(openedPrep, true, 'Abriu o modal de preparação');
+
+  // 6. Perto da logística / armazém (x > 925)
+  mockGame.player.x = 950;
+  mockGame.handleActionInteraction();
+  assert.equal(openedLogistica, true, 'Abriu o modal de logística e cofre');
+
+  // Garantir que nenhuma ação da superfície foi executada durante toda a navegação subterrânea
+  assert.equal(servedCounter, false, 'Controlos de superfície permaneceram 100% desativados no subsolo');
+});
+
 

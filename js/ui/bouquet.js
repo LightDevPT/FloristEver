@@ -134,6 +134,7 @@ export class BouquetUi {
   }
 
   openBouquetModal() {
+    if (document.body.classList.contains('subsolo-mode')) return;
     this.sound.playClick();
     if (this.modalBouquet) {
       this.modalBouquet.classList.remove('hidden');
@@ -142,6 +143,7 @@ export class BouquetUi {
   }
 
   openBookModal() {
+    if (document.body.classList.contains('subsolo-mode')) return;
     this.sound.playClick();
     if (this.modalBook) {
       this.modalBook.classList.remove('hidden');

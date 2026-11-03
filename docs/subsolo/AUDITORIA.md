@@ -114,7 +114,7 @@ Ficheiro [`js/main.js`](file:///c:/Users/euafo/Downloads/FloristEver/js/main.js)
   - A loja de melhorias receberá a secção discreta **"Subsolo"**.
   - As Definições receberão as opções de **"Modo Discreto"**, **"Modo Tranquilo"** e **"Ajuda de Códigos"**.
 
-### 2.9. Ajudantes, Clientes e Comportamento Offline
+### 2.9. Ajudantes, Clientes e ComportamentRo Offline
 - **Ajudantes:** Colhedores (`WorkerManager`) e Ajudante de Ramos (`BouquetWorkerManager`). No modo offline, o método `processOfflineEmployment()` calcula ganhos e salários com base em timestamps até ao teto de 8 horas.
 - **Clientes:** Geridos em [`js/entities/customer.js`](file:///c:/Users/euafo/Downloads/FloristEver/js/entities/customer.js). Atendimento pelo jogador ou pelo Caixa Automático.
 - **Regra Inegociável #8:** O Caixa Automático e os ajudantes atendem **exclusivamente** clientes normais de flores. Os clientes secretos do Subsolo exigem interação manual explícita do jogador; os ajudantes ignoram-nos por completo.
