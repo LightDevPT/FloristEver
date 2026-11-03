@@ -155,50 +155,74 @@
       <!-- HUD Temática do Subsolo (ativa quando no túnel secreto) -->
       <div id="subsolo-hud" class="subsolo-hud-layer hidden" aria-label="Painel do Subsolo">
         <div class="subsolo-hud-pills">
-          <div class="hud-pill subsolo-pill subsolo-respect-pill" id="subsolo-hud-respect" title="Nível de Respeito">★ S1</div>
+          <div class="hud-pill subsolo-pill subsolo-respect-pill" id="subsolo-hud-respect" title="Nível de Respeito">
+            <span class="subsolo-icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#C084FC" stroke="#A855F7" stroke-width="1.5"/></svg></span>
+            <span id="subsolo-respect-text">S1</span>
+          </div>
           <div class="hud-pill subsolo-pill subsolo-energy-pill" id="subsolo-hud-energy" title="Energia elétrica (Clica para rodar o dínamo)">
-            <span class="subsolo-icon" aria-hidden="true">⚡</span>
+            <span class="subsolo-icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 2L4 13H12L10 22L20 10H12L14 2H13Z" fill="#EAB308" stroke="#CA8A04" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
             <span id="subsolo-energy-text" class="hud-value">100%</span>
+            <span class="subsolo-pill-meter"><span class="meter-bar" id="meter-energy-bar" style="width: 100%;"></span></span>
           </div>
           <div class="hud-pill subsolo-pill subsolo-water-pill" id="subsolo-hud-water" title="Reservatório de água">
-            <span class="subsolo-icon" aria-hidden="true">💧</span>
+            <span class="subsolo-icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5C12 2.5 5 11 5 15.5C5 19.36 8.13 22.5 12 22.5C15.87 22.5 19 19.36 19 15.5C19 11 12 2.5 12 2.5Z" fill="#06B6D4" stroke="#0891B2" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
             <span id="subsolo-water-text" class="hud-value">100%</span>
+            <span class="subsolo-pill-meter"><span class="meter-bar fill-cyan" id="meter-water-bar" style="width: 100%;"></span></span>
           </div>
           <div class="hud-pill subsolo-pill subsolo-heat-pill" id="subsolo-hud-heat" title="Nível de Calor / Fiscalização">
-            <span class="subsolo-icon" aria-hidden="true">🔥</span>
+            <span class="subsolo-icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C12 2 15 5 15 8C15 9.1 14.5 10.1 13.7 10.8C15.5 11.5 17 13.1 17 15.5C17 18.5 14.5 21 11.5 21C8.5 21 6 18.5 6 15.5C6 13 8 11 9 9C9 7 12 2 12 2Z" fill="#EF4444" stroke="#B91C1C" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
             <span id="subsolo-heat-text" class="hud-value">0%</span>
+            <span class="subsolo-pill-meter"><span class="meter-bar fill-amber" id="meter-heat-bar" style="width: 0%;"></span></span>
           </div>
           <div class="hud-pill subsolo-pill subsolo-mala-pill" id="subsolo-hud-mala" title="Mala de transporte secreta">
-            <span class="subsolo-icon" aria-hidden="true">💼</span>
+            <span class="subsolo-icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="7" width="18" height="13" rx="2" fill="#475569" stroke="#334155" stroke-width="1.6"/><path d="M9 7V4C9 3.4 9.4 3 10 3H14C14.6 3 15 3.4 15 4V7" stroke="#94A3B8" stroke-width="1.5"/><path d="M3 11H21" stroke="#334155" stroke-width="1.3"/></svg></span>
             <span id="subsolo-mala-text" class="hud-value">0/10</span>
+            <span class="subsolo-pill-meter"><span class="meter-bar fill-purple" id="meter-mala-bar" style="width: 0%;"></span></span>
           </div>
         </div>
 
         <div class="subsolo-hud-actions">
+          <button
+            id="btn-toggle-subsolo-menu"
+            class="btn-hud subsolo-btn subsolo-menu-toggle"
+            type="button"
+            aria-label="Abrir menu do Subsolo"
+            aria-expanded="false"
+            aria-controls="subsolo-hud-menu-items"
+          >
+            <span class="hud-menu-toggle-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="hud-menu-toggle-label">Menu</span>
+          </button>
+          <div id="subsolo-hud-menu-items" class="subsolo-hud-menu-items">
           <button id="btn-subsolo-cultivo" class="btn-hud btn-bounce subsolo-btn" type="button" title="Estufa e Canteiros UV" aria-label="Cultivo Subterrâneo">
-            <span class="icon" aria-hidden="true">🌱</span>
+            <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22V13" stroke="#10B981" stroke-width="2.2" stroke-linecap="round"/><path d="M12 13C12 8.5 16.5 7 20 7C20 11 17 15 12 15" fill="#34D399" stroke="#059669" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 16C12 13 8.5 11.5 5 12C5 15.5 8 17.5 12 17.5" fill="#10B981" stroke="#047857" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 3L10.5 5.5M15 3L13.5 5.5M12 2V5" stroke="#C084FC" stroke-width="1.6" stroke-linecap="round"/></svg></span>
             <span class="btn-label">Cultivo</span>
           </button>
           <button id="btn-subsolo-secagem" class="btn-hud btn-bounce subsolo-btn" type="button" title="Estendais de Secagem" aria-label="Secagem de Folhas">
-            <span class="icon" aria-hidden="true">🧺</span>
+            <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6H21" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round"/><path d="M6 6V11C6 13 8 15 8 17C8 15 10 13 10 11V6" stroke="#D97706" stroke-width="1.6" fill="#FDE68A"/><path d="M14 6V10C14 12 16 14 16 16C16 14 18 12 18 10V6" stroke="#D97706" stroke-width="1.6" fill="#FDE68A"/><circle cx="6" cy="6" r="1.5" fill="#F59E0B"/><circle cx="14" cy="6" r="1.5" fill="#F59E0B"/></svg></span>
             <span class="btn-label">Secagem</span>
           </button>
           <button id="btn-subsolo-prep" class="btn-hud btn-bounce subsolo-btn" type="button" title="Bancada de Preparação" aria-label="Bancada de Corte">
-            <span class="icon" aria-hidden="true">📦</span>
+            <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="10" width="18" height="10" rx="2" fill="#0F172A" stroke="#38BDF8" stroke-width="2"/><path d="M3 14H21" stroke="#38BDF8" stroke-width="1.5"/><path d="M7 6L11 10M17 6L13 10" stroke="#7DD3FC" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="14" r="2" fill="#38BDF8"/></svg></span>
             <span class="btn-label">Bancada</span>
           </button>
           <button id="btn-subsolo-logistica" class="btn-hud btn-bounce subsolo-btn" type="button" title="Logística: Mala e Cofre" aria-label="Logística e Cofre">
-            <span class="icon" aria-hidden="true">💼</span>
+            <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="8" width="16" height="12" rx="2.5" fill="#1E1B4B" stroke="#A855F7" stroke-width="2"/><path d="M8 8V5.5C8 4.7 8.7 4 9.5 4H14.5C15.3 4 16 4.7 16 5.5V8" stroke="#A855F7" stroke-width="2" stroke-linecap="round"/><path d="M4 13H20" stroke="#A855F7" stroke-width="1.5"/><circle cx="12" cy="13" r="2" fill="#F59E0B"/></svg></span>
             <span class="btn-label">Logística</span>
           </button>
           <button id="btn-subsolo-dynamo" class="btn-hud btn-bounce subsolo-btn" type="button" title="Rodar Dínamo (+15% Energia)" aria-label="Dínamo Manual">
-            <span class="icon" aria-hidden="true">⚡</span>
+            <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="8" fill="#1C1917" stroke="#EAB308" stroke-width="2"/><path d="M13 7L9 13H14L11 18" stroke="#FDE047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <span class="btn-label">Dínamo</span>
           </button>
           <button id="btn-subsolo-subir" class="btn-hud btn-bounce subsolo-btn btn-subsolo-exit" type="button" title="Subir para a Floricultura" aria-label="Subir para a Floricultura">
-            <span class="icon" aria-hidden="true">🪜</span>
-            <span class="btn-label">Subir ↑</span>
+            <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 3V21M17 3V21" stroke="#22C55E" stroke-width="2.4" stroke-linecap="round"/><path d="M7 6H17M7 10H17M7 14H17M7 18H17" stroke="#86EFAC" stroke-width="2" stroke-linecap="round"/><path d="M12 2L9.5 4.5M12 2L14.5 4.5" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="btn-label">Subir</span>
           </button>
+          </div>
         </div>
       </div>
     </header>
@@ -848,14 +872,14 @@
     <div id="modal-subsolo-cultivo" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="cultivo-title">
       <div class="modal-window cozy-card subsolo-modal-window">
         <div class="modal-header subsolo-modal-header">
-          <h2 id="cultivo-title">🌱 Estufa Subterrânea (Cultivo UV)</h2>
+          <h2 id="cultivo-title"><span class="modal-title-icon"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22V13" stroke="#10B981" stroke-width="2.2" stroke-linecap="round"/><path d="M12 13C12 8.5 16.5 7 20 7C20 11 17 15 12 15" fill="#34D399" stroke="#059669" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 16C12 13 8.5 11.5 5 12C5 15.5 8 17.5 12 17.5" fill="#10B981" stroke="#047857" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 3L10.5 5.5M15 3L13.5 5.5M12 2V5" stroke="#C084FC" stroke-width="1.6" stroke-linecap="round"/></svg></span> Estufa Subterrânea (Cultivo UV)</h2>
           <button type="button" class="btn-close-modal btn-close-subsolo" data-close-subsolo="modal-subsolo-cultivo" aria-label="Fechar">✕</button>
         </div>
         <div class="modal-body subsolo-modal-body">
           <div class="subsolo-top-bar-controls">
-            <div id="subsolo-cultivo-speed-banner" class="subsolo-status-badge status-good">⚡ Velocidade: 100%</div>
-            <button type="button" class="btn-secondary btn-sm" onclick="window.__floristSubsoloUI.refillWaterTank()">💧 Encher Água</button>
-            <button type="button" class="btn-secondary btn-sm" onclick="window.__floristSubsoloUI.buyFuelSupply()">⛽ Comprar Combustível</button>
+            <div id="subsolo-cultivo-speed-banner" class="subsolo-status-badge status-good">Velocidade: 100%</div>
+            <button type="button" class="btn-secondary btn-sm btn-subsolo-ctrl" onclick="window.__floristSubsoloUI.refillWaterTank()"><svg class="subsolo-btn-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5C12 2.5 5 11 5 15.5C5 19.36 8.13 22.5 12 22.5C15.87 22.5 19 19.36 19 15.5C19 11 12 2.5 12 2.5Z" fill="#06B6D4" stroke="#0891B2" stroke-width="1.6" stroke-linejoin="round"/></svg> Encher Água</button>
+            <button type="button" class="btn-secondary btn-sm btn-subsolo-ctrl" onclick="window.__floristSubsoloUI.buyFuelSupply()"><svg class="subsolo-btn-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6H16V20C16 20.6 15.6 21 15 21H5C4.4 21 4 20.6 4 20V6Z" fill="#7C2D12" stroke="#F97316" stroke-width="1.8"/><path d="M6 3H11V6H6V3Z" fill="#F97316"/><path d="M13 3L16 6" stroke="#F97316" stroke-width="1.8" stroke-linecap="round"/></svg> Comprar Combustível</button>
           </div>
           <div id="subsolo-cultivo-plots" class="subsolo-cards-grid"></div>
         </div>
@@ -865,7 +889,7 @@
     <div id="modal-subsolo-secagem" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="secagem-title">
       <div class="modal-window cozy-card subsolo-modal-window">
         <div class="modal-header subsolo-modal-header">
-          <h2 id="secagem-title">🧺 Estendais de Secagem & Cura</h2>
+          <h2 id="secagem-title"><span class="modal-title-icon"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6H21" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round"/><path d="M6 6V11C6 13 8 15 8 17C8 15 10 13 10 11V6" stroke="#D97706" stroke-width="1.6" fill="#FDE68A"/><path d="M14 6V10C14 12 16 14 16 16C16 14 18 12 18 10V6" stroke="#D97706" stroke-width="1.6" fill="#FDE68A"/><circle cx="6" cy="6" r="1.5" fill="#F59E0B"/><circle cx="14" cy="6" r="1.5" fill="#F59E0B"/></svg></span> Estendais de Secagem & Cura</h2>
           <button type="button" class="btn-close-modal btn-close-subsolo" data-close-subsolo="modal-subsolo-secagem" aria-label="Fechar">✕</button>
         </div>
         <div class="modal-body subsolo-modal-body">
@@ -878,7 +902,7 @@
     <div id="modal-subsolo-prep" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="prep-title">
       <div class="modal-window cozy-card subsolo-modal-window">
         <div class="modal-header subsolo-modal-header">
-          <h2 id="prep-title">📦 Bancada de Preparação & Armazém</h2>
+          <h2 id="prep-title"><span class="modal-title-icon"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="10" width="18" height="10" rx="2" fill="#0F172A" stroke="#38BDF8" stroke-width="2"/><path d="M3 14H21" stroke="#38BDF8" stroke-width="1.5"/><path d="M7 6L11 10M17 6L13 10" stroke="#7DD3FC" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="14" r="2" fill="#38BDF8"/></svg></span> Bancada de Preparação & Armazém</h2>
           <button type="button" class="btn-close-modal btn-close-subsolo" data-close-subsolo="modal-subsolo-prep" aria-label="Fechar">✕</button>
         </div>
         <div class="modal-body subsolo-modal-body">
@@ -892,7 +916,7 @@
     <div id="modal-subsolo-logistica" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="logistica-title">
       <div class="modal-window cozy-card subsolo-modal-window">
         <div class="modal-header subsolo-modal-header">
-          <h2 id="logistica-title">💼 Logística Secreta (Mala & Cofre)</h2>
+          <h2 id="logistica-title"><span class="modal-title-icon"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="8" width="16" height="12" rx="2.5" fill="#1E1B4B" stroke="#A855F7" stroke-width="2"/><path d="M8 8V5.5C8 4.7 8.7 4 9.5 4H14.5C15.3 4 16 4.7 16 5.5V8" stroke="#A855F7" stroke-width="2" stroke-linecap="round"/><path d="M4 13H20" stroke="#A855F7" stroke-width="1.5"/><circle cx="12" cy="13" r="2" fill="#F59E0B"/></svg></span> Logística Secreta (Mala & Cofre)</h2>
           <button type="button" class="btn-close-modal btn-close-subsolo" data-close-subsolo="modal-subsolo-logistica" aria-label="Fechar">✕</button>
         </div>
         <div class="modal-body subsolo-modal-body">

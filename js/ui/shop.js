@@ -105,6 +105,7 @@ export class ShopUi {
   }
 
   open() {
+    if (document.body.classList.contains('subsolo-mode')) return;
     this.sound.playClick();
     if (this.modalEl) {
       this.modalEl.classList.remove('hidden');
@@ -124,6 +125,7 @@ export class ShopUi {
   }
 
   openChallenges() {
+    if (document.body.classList.contains('subsolo-mode')) return;
     this.sound.playClick();
     this.challengesModal?.classList.remove('hidden');
     this.renderChallenges();

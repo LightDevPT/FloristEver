@@ -6645,185 +6645,519 @@ body.garden-decoration-mode #game-canvas:active {
 }
 
 /* ========================================================
-   SUBSOLO (v2.0.0) — HUD TEMÁTICA E MODAIS DO TÚNEL
+   SUBSOLO (v2.0.0) — INTERFACES COZY DARK DO TÚNEL
+   Interface estrutural idêntica à superfície, com paleta dark acolhedora
+   Sem efeitos brilhantes/neon: sombras sólidas, botões funcionais e alinhados
    ======================================================== */
 
 .subsolo-hidden {
   display: none !important;
+  pointer-events: none !important;
 }
 
+/* ── Bloqueio dos Controlos do Solo (Superfície) no Subsolo ── */
+body.subsolo-mode .hud-actions,
+body.subsolo-mode #btn-toggle-hud-menu,
+body.subsolo-mode #hud-menu-items,
+body.subsolo-mode #hud-basket-pill,
+body.subsolo-mode #hud-world-status,
+body.subsolo-mode #hud-favorite-objective,
+body.subsolo-mode #map-panel,
+body.subsolo-mode #btn-toggle-map,
+body.subsolo-mode #tutorial-banner,
+body.subsolo-mode #modal-shop,
+body.subsolo-mode #modal-bouquet,
+body.subsolo-mode #modal-book:not(.subsolo-book-open),
+body.subsolo-mode #modal-compost,
+body.subsolo-mode #modal-missions,
+body.subsolo-mode #modal-challenges {
+  display: none !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* ── HUD do Subsolo: Estrutura idêntica ao HUD normal, em tons escuros ── */
 .subsolo-hud-layer {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  pointer-events: none;
+  z-index: 25;
 }
 
 .subsolo-hud-pills {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
+  pointer-events: auto;
 }
 
+/* Pills de Estado (estilo idêntico a .hud-pill, paleta escura suave) */
 .subsolo-pill {
-  background: #23272A !important;
-  border: 1.5px solid #3E474F !important;
-  color: #E2E8F0 !important;
-  padding: 4px 10px !important;
-  border-radius: 14px !important;
+  pointer-events: auto;
+  background: #232733 !important;
+  border: 2px solid #32384A !important;
+  box-shadow: 0 3px 0 #12141A !important;
+  border-radius: var(--border-radius-lg) !important;
+  padding: 6px 14px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-family: var(--font-main) !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  color: #EDEFEA !important;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+  position: relative;
+  box-sizing: border-box;
+  min-height: 40px;
+}
+
+.subsolo-pill:hover {
+  background: #2A3040 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 0 #12141A !important;
+}
+
+.subsolo-pill:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #12141A !important;
+}
+
+.subsolo-pill .subsolo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Mini-medidor plano e limpo (sem neon nem listras) */
+.subsolo-pill-meter {
+  display: inline-block;
+  width: 32px;
+  height: 6px;
+  background: #141720;
+  border: 1px solid #32384A;
+  border-radius: 3px;
+  overflow: hidden;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.subsolo-pill-meter .meter-bar {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: #EAB308;
+  transition: width 0.3s ease;
+}
+
+.subsolo-pill-meter .meter-bar.fill-cyan {
+  background: #06B6D4;
+}
+
+.subsolo-pill-meter .meter-bar.fill-amber {
+  background: #F97316;
+}
+
+.subsolo-pill-meter .meter-bar.fill-purple {
+  background: #A855F7;
+}
+
+/* Variantes de recursos críticos */
+.subsolo-pill.critical-resource {
+  border-color: #DC2626 !important;
+  background: #3B1B20 !important;
+  color: #FCA5A5 !important;
+}
+
+.subsolo-pill.warning-resource {
+  border-color: #D97706 !important;
+  background: #382813 !important;
+  color: #FDE68A !important;
+}
+
+/* ── Botões de Ação na HUD do Subsolo (Seguem .btn-hud da normal) ── */
+.subsolo-hud-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  pointer-events: auto;
+}
+
+.btn-hud.subsolo-btn.subsolo-menu-toggle {
+  display: none !important;
+}
+
+.subsolo-hud-menu-items {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-hud.subsolo-btn {
+  background: #232733 !important;
+  border: 2px solid #32384A !important;
+  box-shadow: 0 3px 0 #12141A !important;
+  border-radius: var(--border-radius-md) !important;
+  padding: 8px 14px !important;
+  font-family: var(--font-main) !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  color: #EDEFEA !important;
+  cursor: pointer;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 40px !important;
+  box-sizing: border-box !important;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+  position: relative;
+}
+
+.btn-hud.subsolo-btn:hover {
+  background: #2D3447 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 0 #12141A !important;
+}
+
+.btn-hud.subsolo-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #12141A !important;
+}
+
+.btn-hud.subsolo-btn .icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Botão Subir: Destaque em tom esmeralda sólido */
+.btn-hud.subsolo-btn.btn-subsolo-exit {
+  background: #14422E !important;
+  border: 2px solid #10B981 !important;
+  box-shadow: 0 3px 0 #07261A !important;
+  color: #A7F3D0 !important;
+}
+
+.btn-hud.subsolo-btn.btn-subsolo-exit:hover {
+  background: #1A543A !important;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 0 #07261A !important;
+}
+
+.btn-hud.subsolo-btn.btn-subsolo-exit:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #07261A !important;
+}
+
+/* Badge de Notificação nos Botões da HUD */
+.hud-notify-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #10B981;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 800;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #232733;
+  box-shadow: 0 2px 0 #064E3B;
+}
+
+/* ── Janelas Modais do Subsolo (Seguem .cozy-card em tons escuros) ── */
+.subsolo-modal-window.cozy-card {
+  background: #1A1D24 !important;
+  border: 3px solid #32384A !important;
+  box-shadow: 0 6px 0 #101217, 0 16px 36px rgba(0, 0, 0, 0.5) !important;
+  border-radius: var(--border-radius-lg) !important;
+  width: 720px !important;
+  max-width: 95vw !important;
+  max-height: 90vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  animation: pop-modal 0.22s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.subsolo-modal-header {
+  background: #232733 !important;
+  border-bottom: 3px solid #32384A !important;
+  padding: 14px 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.subsolo-modal-header h2 {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  color: #EDEFEA !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+
+/* Botão Fechar Modal */
+.btn-close-subsolo {
+  background: #1A1D24 !important;
+  border: 2px solid #4B5563 !important;
+  border-radius: 50% !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: #EDEFEA !important;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn-close-subsolo:hover {
+  background: #DC2626 !important;
+  border-color: #991B1B !important;
+  color: #FFFFFF !important;
+  transform: scale(1.1);
+}
+
+.subsolo-modal-body {
+  padding: 18px 20px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.subsolo-modal-body .modal-intro {
+  font-size: 13px;
+  font-weight: 600;
+  color: #9AA0B2;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ── Barra Superior de Controlos (Estufa UV) ── */
+.subsolo-top-bar-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: #232733;
+  border: 2px solid #32384A;
+  border-radius: 14px;
+  box-shadow: 0 2px 0 #12141A;
+}
+
+.btn-subsolo-ctrl {
+  background: #2D3344 !important;
+  border: 2px solid #414960 !important;
+  box-shadow: 0 3px 0 #161922 !important;
+  color: #EDEFEA !important;
+  border-radius: 12px !important;
+  padding: 7px 13px !important;
+  font-family: var(--font-main) !important;
   font-size: 13px !important;
   font-weight: 700 !important;
   display: inline-flex !important;
   align-items: center !important;
-  gap: 5px !important;
+  gap: 6px !important;
   cursor: pointer;
-  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
 }
 
-.subsolo-pill:hover {
+.btn-subsolo-ctrl:hover {
+  background: #373E52 !important;
   transform: translateY(-1px);
-  border-color: #637381 !important;
+  box-shadow: 0 4px 0 #161922 !important;
 }
 
-.subsolo-respect-pill {
-  background: #2D1B36 !important;
-  border-color: #9333EA !important;
-  color: #D8B4FE !important;
-}
-
-.subsolo-energy-pill.critical-resource,
-.subsolo-water-pill.critical-resource,
-.subsolo-heat-pill.critical-resource {
-  background: #451212 !important;
-  border-color: #EF4444 !important;
-  color: #FCA5A5 !important;
-  animation: pulse-danger 1s infinite alternate;
-}
-
-.subsolo-energy-pill.warning-resource,
-.subsolo-heat-pill.warning-resource {
-  border-color: #F59E0B !important;
-  color: #FCD34D !important;
-}
-
-@keyframes pulse-danger {
-  from { box-shadow: 0 0 2px #EF4444; }
-  to { box-shadow: 0 0 10px #EF4444; }
-}
-
-.subsolo-hud-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.subsolo-btn {
-  background: #1E2327 !important;
-  border: 1.5px solid #3B444C !important;
-  color: #F1F5F9 !important;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-radius: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.subsolo-btn:hover {
-  background: #2D353C !important;
-  border-color: #556573 !important;
-  transform: translateY(-2px);
-}
-
-.btn-subsolo-exit {
-  background: #143522 !important;
-  border-color: #22C55E !important;
-  color: #86EFAC !important;
-}
-
-.btn-subsolo-exit:hover {
-  background: #166534 !important;
-  border-color: #4ADE80 !important;
-}
-
-/* Modais Temáticos do Subsolo */
-.subsolo-modal-window {
-  background: #1C2024 !important;
-  color: #E2E8F0 !important;
-  border: 2px solid #374151 !important;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6) !important;
-  max-width: 640px !important;
-  width: 95% !important;
-}
-
-.subsolo-modal-header {
-  border-bottom: 1.5px solid #2D3748 !important;
-  padding-bottom: 12px;
-}
-
-.subsolo-modal-header h2 {
-  color: #F3F4F6 !important;
-  font-size: 18px;
-  margin: 0;
-}
-
-.subsolo-modal-body {
-  padding-top: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.subsolo-top-bar-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 8px 12px;
-  background: #252B31;
-  border-radius: 8px;
+.btn-subsolo-ctrl:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #161922 !important;
 }
 
 .subsolo-status-badge {
   font-size: 13px;
   font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex: 1;
+  min-width: 220px;
 }
 
 .subsolo-status-badge.status-good {
-  background: #143522;
-  color: #86EFAC;
-  border: 1px solid #22C55E;
+  background: #143A2A;
+  color: #A7F3D0;
+  border: 1.5px solid #10B981;
 }
 
 .subsolo-status-badge.status-bad {
-  background: #451212;
+  background: #3B1B20;
   color: #FCA5A5;
-  border: 1px solid #EF4444;
+  border: 1.5px solid #DC2626;
 }
 
-.subsolo-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-}
-
-.subsolo-card-slot {
-  background: #252B31;
-  border: 1.5px solid #3E474F;
-  border-radius: 10px;
-  padding: 12px;
+.telemetry-chip {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 8px;
 }
 
+.telemetry-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.telemetry-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #9AA0B2;
+  display: block;
+}
+
+.telemetry-value {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.telemetry-value.text-good { color: #A7F3D0; }
+.telemetry-value.text-bad { color: #FCA5A5; }
+
+.telemetry-meters-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.telemetry-mini-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1A1D24;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #EDEFEA;
+  border: 1px solid #32384A;
+}
+
+.telemetry-mini-bar {
+  width: 28px;
+  height: 5px;
+  background: #12141A;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.telemetry-mini-bar .fill {
+  height: 100%;
+  background: #EAB308;
+}
+.telemetry-mini-bar .fill.fill-cyan { background: #06B6D4; }
+.telemetry-mini-bar .fill.fill-amber { background: #F97316; }
+
+/* ── Barra de Ações Rápidas em Lote ── */
+.subsolo-batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 2px 0;
+}
+
+.batch-bar-left, .batch-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.batch-badge {
+  font-size: 12px;
+  color: #9AA0B2;
+}
+.batch-badge strong { color: #EDEFEA; }
+
+.btn-batch-action {
+  font-family: var(--font-main) !important;
+  font-weight: 800 !important;
+  border-radius: 12px !important;
+  padding: 7px 13px !important;
+  font-size: 13px !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+/* ── Grelha de Cartões & Canteiros Subterrâneos ── */
+.subsolo-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.subsolo-card-slot {
+  background: #232733;
+  border: 2px solid #32384A;
+  box-shadow: 0 3px 0 #12141A;
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.15s ease;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.subsolo-card-slot:hover {
+  transform: translateY(-2px);
+  border-color: #4A526B;
+  box-shadow: 0 5px 0 #12141A;
+}
+
+/* Canteiro pronto: destaque acolhedor em verde sólido sem brilhos pulsantes */
 .subsolo-card-slot.ready-slot {
-  border-color: #22C55E;
-  background: #1F2E27;
+  border-color: #10B981 !important;
+  background: #173629 !important;
+  box-shadow: 0 3px 0 #07261A !important;
+}
+
+.subsolo-card-slot.ready-slot:hover {
+  box-shadow: 0 5px 0 #07261A !important;
 }
 
 .subsolo-card-slot.disabled-slot {
@@ -6836,37 +7170,134 @@ body.garden-decoration-mode #game-canvas:active {
   align-items: center;
 }
 
+.slot-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: #EDEFEA;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .slot-tag {
   font-size: 11px;
   font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 10px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
 }
 
-.tag-empty { background: #374151; color: #9CA3AF; }
-.tag-growing { background: #1E3A5F; color: #93C5FD; }
-.tag-ready { background: #14532D; color: #86EFAC; }
+.tag-empty {
+  background: #2D3344;
+  color: #9AA0B2;
+  border: 1px solid #414960;
+}
 
+.tag-growing {
+  background: #173254;
+  color: #93C5FD;
+  border: 1px solid #2563EB;
+}
+
+.tag-ready {
+  background: #144D37;
+  color: #A7F3D0;
+  border: 1px solid #10B981;
+}
+
+.tag-value {
+  background: #523108;
+  color: #FDE68A;
+  border: 1px solid #D97706;
+}
+
+.slot-stage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #93C5FD;
+}
+
+.stage-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #38BDF8;
+}
+
+.slot-stage-badge.stage-amber { color: #FCD34D; }
+.stage-dot.dot-amber {
+  background: #F59E0B;
+}
+
+.ready-yield-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #143A2A;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #10B981;
+}
+
+.yield-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ── Barra de Progresso Limpa (Sólida, sem listras animadas nem neon) ── */
 .subsolo-progress-bar {
   width: 100%;
   height: 8px;
-  background: #181C20;
-  border-radius: 4px;
+  background: #141720;
+  border: 1px solid #32384A;
+  border-radius: 5px;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .subsolo-progress-bar .fill {
   height: 100%;
-  background: linear-gradient(90deg, #9333EA, #3B82F6);
+  background: #10B981;
   border-radius: 4px;
-  transition: width 0.3s ease;
+  transition: width 0.35s ease;
+}
+
+.subsolo-progress-bar .fill-amber {
+  background: #D97706;
+}
+
+.subsolo-progress-bar .fill-cyan {
+  background: #0284C7;
+}
+
+.slot-footer-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.info-pill {
+  color: #9AA0B2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.info-yield {
+  color: #A7F3D0;
+  font-weight: 700;
 }
 
 .slot-desc {
   font-size: 12px;
-  color: #94A3B8;
+  color: #9AA0B2;
   margin: 0;
+  line-height: 1.45;
 }
 
 .slot-actions {
@@ -6876,107 +7307,385 @@ body.garden-decoration-mode #game-canvas:active {
 }
 
 .subsolo-select {
-  background: #181C20;
-  border: 1px solid #475569;
-  color: #F1F5F9;
-  padding: 6px 8px;
-  border-radius: 6px;
+  background: #1A1D24;
+  border: 2px solid #32384A;
+  color: #EDEFEA;
+  padding: 7px 10px;
+  border-radius: 10px;
   font-size: 12px;
+  font-weight: 600;
   flex: 1;
+  height: 36px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s ease;
 }
 
-.btn-xs {
+.subsolo-select:focus {
+  border-color: #60A5FA;
+}
+
+/* ── Botões de Ação dentro dos Canteiros e Modais ── */
+.btn-subsolo-action {
+  font-family: var(--font-main) !important;
+  font-weight: 700 !important;
+  border-radius: 12px !important;
+  padding: 8px 14px !important;
+  font-size: 13px !important;
+  height: 36px !important;
+  box-sizing: border-box !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+}
+
+/* Variante primária (Azul / Ação padrão) */
+.btn-subsolo-action.btn-primary,
+.subsolo-modal-body .btn-primary {
+  background: #1D4ED8 !important;
+  border: 2px solid #3B82F6 !important;
+  box-shadow: 0 3px 0 #112F82 !important;
+  color: #FFFFFF !important;
+}
+
+.btn-subsolo-action.btn-primary:hover:not(:disabled),
+.subsolo-modal-body .btn-primary:hover:not(:disabled) {
+  background: #2563EB !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 #112F82 !important;
+}
+
+.btn-subsolo-action.btn-primary:active:not(:disabled),
+.subsolo-modal-body .btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #112F82 !important;
+}
+
+/* Variante sucesso (Verde Esmeralda / Colheita) */
+.btn-subsolo-action.btn-success,
+.subsolo-modal-body .btn-success {
+  background: #155E45 !important;
+  border: 2px solid #10B981 !important;
+  box-shadow: 0 3px 0 #0A3828 !important;
+  color: #FFFFFF !important;
+}
+
+.btn-subsolo-action.btn-success:hover:not(:disabled),
+.subsolo-modal-body .btn-success:hover:not(:disabled) {
+  background: #1C7355 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 #0A3828 !important;
+}
+
+.btn-subsolo-action.btn-success:active:not(:disabled),
+.subsolo-modal-body .btn-success:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #0A3828 !important;
+}
+
+/* Variante secundária */
+.subsolo-modal-body .btn-secondary {
+  background: #2D3344 !important;
+  border: 2px solid #414960 !important;
+  box-shadow: 0 3px 0 #161922 !important;
+  color: #EDEFEA !important;
+  border-radius: 12px !important;
+  padding: 7px 13px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.subsolo-modal-body .btn-secondary:hover:not(:disabled) {
+  background: #373E52 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 #161922 !important;
+}
+
+.subsolo-modal-body .btn-secondary:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #161922 !important;
+}
+
+button:disabled.btn-subsolo-action,
+button:disabled.btn-primary,
+button:disabled.btn-success {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Secção da Bancada de Preparação ── */
+.subsolo-bench-status {
+  background: #232733;
+  border-radius: 16px;
+  padding: 16px 18px;
+  border: 2px solid #32384A;
+  box-shadow: 0 3px 0 #12141A;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subsolo-bench-status .bench-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bench-icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #173254;
+  border: 1.5px solid #2563EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bench-ready-icon {
+  background: #144D37;
+  border-color: #10B981;
+}
+
+.subsolo-bench-status .bench-subtitle {
+  font-size: 12px;
+  color: #9AA0B2;
+  margin: 3px 0 0;
+}
+
+.subsolo-bench-status.working {
+  border-color: #2563EB;
+}
+
+.subsolo-bench-status.ready {
+  border-color: #10B981;
+  background: #173629;
+}
+
+.bench-stock-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1A1D24;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  border: 1px solid #32384A;
+}
+
+.stock-chip-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #9AA0B2;
+}
+
+.stock-highlight {
+  color: #A7F3D0;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.prep-card-slot {
+  gap: 10px;
+}
+
+.prep-specs-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.spec-pill {
   font-size: 11px;
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 6px;
-  background: #3B82F6;
-  color: #FFFFFF;
-  border: none;
-  cursor: pointer;
+  background: #1A1D24;
+  border: 1px solid #32384A;
+  color: #EDEFEA;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.btn-xs:hover { background: #2563EB; }
+.spec-pill.spec-ok {
+  border-color: #10B981;
+  color: #A7F3D0;
+}
 
-.btn-sm {
-  font-size: 12px;
-  padding: 5px 10px;
-  border-radius: 6px;
-  cursor: pointer;
+.spec-pill.spec-missing {
+  border-color: #DC2626;
+  color: #FCA5A5;
+}
+
+.spec-pill.spec-unlocked {
+  border-color: #7C3AED;
+  color: #DDD6FE;
+}
+
+.spec-pill.spec-locked {
+  border-color: #DC2626;
+  color: #FCA5A5;
+}
+
+.prep-hint-alert {
+  font-size: 11px;
   font-weight: 700;
+  color: #FCA5A5;
+  background: #3B1B20;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #DC2626;
 }
 
-.btn-success {
-  background: #15803D;
-  color: #FFFFFF;
-  border: 1px solid #22C55E;
+/* ── Secção de Logística: Armazém, Mala e Cofre ── */
+.subsolo-flow-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #232733;
+  border-radius: 12px;
+  border: 2px solid #32384A;
+  box-shadow: 0 2px 0 #12141A;
+  flex-wrap: wrap;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9AA0B2;
 }
 
-.btn-success:hover { background: #16A34A; }
-
-.btn-danger {
-  background: #DC2626;
-  color: #FFFFFF;
-  border: 1px solid #EF4444;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-weight: 800;
-  cursor: pointer;
+.flow-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.btn-danger:hover { background: #B91C1C; }
+.flow-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.flow-dot.amber { background: #D97706; }
+.flow-dot.cyan { background: #0284C7; }
+.flow-dot.purple { background: #7C3AED; }
+.flow-dot.green { background: #10B981; }
 
-/* Secção da bancada */
-.subsolo-bench-status {
-  background: #252B31;
-  border-radius: 8px;
-  padding: 12px;
-  border: 1.5px solid #3E474F;
+.flow-arrow {
+  color: #64748B;
+  font-size: 12px;
 }
 
-.subsolo-bench-status.working {
-  border-color: #3B82F6;
+.subsolo-logistics-quick-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.subsolo-bench-status.ready {
-  border-color: #22C55E;
-  background: #172B20;
-}
-
-.subsolo-section-title {
-  font-size: 14px;
-  font-weight: 800;
-  color: #E2E8F0;
-  margin: 8px 0 0 0;
-}
-
-/* Secção de logística */
 .subsolo-logistics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
 }
 
 .logistics-col {
-  background: #252B31;
-  border: 1.5px solid #3E474F;
-  border-radius: 10px;
-  padding: 12px;
+  background: #232733;
+  border: 2px solid #32384A;
+  box-shadow: 0 3px 0 #12141A;
+  border-radius: 16px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+}
+
+.logistics-col.col-armazem {
+  border-top: 4px solid #D97706;
+}
+
+.logistics-col.col-mala {
+  border-top: 4px solid #0284C7;
+}
+
+.logistics-col.col-cofre {
+  border-top: 4px solid #7C3AED;
+}
+
+.col-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .logistics-col h3 {
-  font-size: 14px;
+  font-size: 15px;
   margin: 0;
-  color: #F8FAFC;
+  color: #EDEFEA;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+
+.col-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #523108;
+  color: #FDE68A;
+  border: 1px solid #D97706;
+}
+
+.col-badge-cyan {
+  background: #173254;
+  color: #93C5FD;
+  border-color: #2563EB;
+}
+
+.col-badge-purple {
+  background: #3B1B54;
+  color: #DDD6FE;
+  border-color: #7C3AED;
+}
+
+.capacity-gauge-track {
+  width: 100%;
+  height: 6px;
+  background: #141720;
+  border: 1px solid #32384A;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: -2px 0 4px;
+}
+
+.gauge-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.gauge-fill.fill-cyan { background: #0284C7; }
+.gauge-fill.fill-purple { background: #7C3AED; }
 
 .col-desc {
   font-size: 11px;
-  color: #94A3B8;
+  color: #9AA0B2;
   margin: 0;
+  line-height: 1.4;
 }
 
 .stock-item {
@@ -6984,32 +7693,405 @@ body.garden-decoration-mode #game-canvas:active {
   justify-content: space-between;
   align-items: center;
   font-size: 12px;
-  padding: 4px 0;
-  border-bottom: 1px dashed #333C44;
+  padding: 6px 0;
+  border-bottom: 1px dashed #32384A;
 }
 
+.stock-name {
+  color: #9AA0B2;
+}
+
+.stock-number {
+  font-size: 14px;
+  color: #EDEFEA;
+}
+
+.stock-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-transfer {
+  font-family: var(--font-main) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  padding: 4px 8px !important;
+  border-radius: 8px !important;
+  background: #1D4ED8 !important;
+  border: 1.5px solid #3B82F6 !important;
+  box-shadow: 0 2px 0 #112F82 !important;
+  color: #FFFFFF !important;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+}
+
+.btn-transfer:hover {
+  background: #2563EB !important;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 0 #112F82 !important;
+}
+
+.btn-transfer:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #112F82 !important;
+}
+
+/* Alerta de Fiscalização */
 .subsolo-fiscal-alert {
-  background: #451212;
-  border: 2px solid #EF4444;
-  border-radius: 8px;
-  padding: 12px;
+  background: #3B1B20;
+  border: 2px solid #DC2626;
+  border-radius: 14px;
+  box-shadow: 0 3px 0 #200D10;
+  padding: 14px 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   text-align: center;
 }
 
-/* Botão Dev no Menu HUD */
+.subsolo-fiscal-alert .alert-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subsolo-fiscal-alert .alert-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.subsolo-fiscal-alert p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #FCA5A5;
+}
+
+.btn-subsolo-alert {
+  padding: 8px 18px;
+  font-weight: 800;
+  border-radius: 12px;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #DC2626 !important;
+  border: 2px solid #EF4444 !important;
+  box-shadow: 0 3px 0 #7F1D1D !important;
+  color: #FFFFFF !important;
+}
+
+/* ── Modal de Venda a Cliente Secreto (.secret-trade-card) ── */
+.secret-trade-card {
+  max-width: 480px;
+  background: #1A1D24 !important;
+  color: #EDEFEA !important;
+  border: 3px solid #32384A !important;
+  border-radius: 18px !important;
+  padding: 20px !important;
+  box-shadow: 0 6px 0 #101217, 0 16px 36px rgba(0, 0, 0, 0.5) !important;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (max-width: 900px), (max-height: 520px) {
+  .subsolo-hud-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 48px;
+    display: block;
+    width: auto;
+    min-width: 0;
+  }
+
+  .subsolo-hud-pills {
+    max-width: 100%;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .subsolo-pill {
+    min-height: 36px;
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    gap: 5px !important;
+  }
+
+  .subsolo-pill-meter {
+    width: 24px;
+  }
+
+  .subsolo-hud-actions {
+    position: absolute;
+    top: 0;
+    right: -48px;
+    display: block;
+  }
+
+  .btn-hud.subsolo-btn.subsolo-menu-toggle {
+    display: inline-flex !important;
+    width: 42px;
+    min-width: 42px;
+    height: 42px !important;
+    padding: 7px !important;
+    border-radius: 13px !important;
+  }
+
+  .subsolo-menu-toggle .hud-menu-toggle-icon,
+  .subsolo-menu-toggle .hud-menu-toggle-icon svg {
+    display: block;
+    width: 22px;
+    height: 22px;
+  }
+
+  .subsolo-menu-toggle .hud-menu-toggle-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .subsolo-hud-menu-items {
+    position: absolute;
+    z-index: 45;
+    top: calc(100% + 8px);
+    right: 0;
+    display: none;
+    width: min(230px, calc(100vw - 24px));
+    max-height: calc(100dvh - 74px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 7px;
+    border: 2px solid #32384A;
+    border-radius: 16px;
+    background: #1A1D24;
+    box-shadow: 0 5px 0 #101217, 0 10px 26px rgba(0, 0, 0, 0.35);
+  }
+
+  .subsolo-hud-menu-items.is-open {
+    display: grid;
+    gap: 6px;
+  }
+
+  .subsolo-hud-menu-items .btn-hud {
+    width: 100%;
+    min-height: 42px;
+    justify-content: flex-start;
+    padding: 7px 10px !important;
+    font-size: 13px;
+    text-align: left;
+  }
+
+  .subsolo-hud-menu-items .btn-hud .btn-label {
+    display: inline;
+  }
+}
+
+.secret-trade-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.secret-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trenchcoat-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.secret-header-title h3 {
+  font-size: 16px;
+  margin: 0;
+  color: #EDEFEA;
+}
+
+.clandestine-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #DDD6FE;
+  background: #3B1B54;
+  border: 1px solid #7C3AED;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.secret-trade-quote-box {
+  background: #232733;
+  border-left: 4px solid #7C3AED;
+  padding: 12px 14px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.transmission-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #DDD6FE;
+  letter-spacing: 0.5px;
+}
+
+.secret-trade-quote-box .quote-text {
+  font-style: italic;
+  font-size: 13px;
+  color: #EDEFEA;
+  line-height: 1.45;
+}
+
+.quote-assist-pill {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #A7F3D0;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 11px;
+  color: #9AA0B2;
+  font-weight: 700;
+}
+
+.secret-trade-stock-bar {
+  background: #232733;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  border: 1.5px solid #32384A;
+}
+
+.secret-trade-stock-bar.stock-ok {
+  border-color: #10B981;
+}
+
+.secret-trade-stock-bar.stock-empty {
+  border-color: #DC2626;
+}
+
+.stock-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #EDEFEA;
+}
+
+.stock-count {
+  font-size: 14px;
+  margin-left: 4px;
+  color: #EDEFEA;
+}
+
+.stock-status-pill {
+  font-weight: 800;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.secret-trade-reward-banner {
+  background: #523108;
+  border: 1.5px solid #D97706;
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #EDEFEA;
+}
+
+.reward-val {
+  color: #FDE68A;
+  font-size: 14px;
+}
+
+.secret-trade-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.btn-secret-submit {
+  flex: 1;
+  padding: 10px 16px;
+  font-family: var(--font-main) !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
+  border-radius: 12px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #155E45 !important;
+  border: 2px solid #10B981 !important;
+  box-shadow: 0 3px 0 #0A3828 !important;
+  color: #FFFFFF !important;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.btn-secret-submit:hover:not(:disabled) {
+  background: #1C7355 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 #0A3828 !important;
+}
+
+.btn-secret-dismiss {
+  padding: 10px 14px;
+  font-family: var(--font-main) !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  border-radius: 12px !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #2D3344 !important;
+  border: 2px solid #414960 !important;
+  box-shadow: 0 3px 0 #161922 !important;
+  color: #EDEFEA !important;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.btn-secret-dismiss:hover {
+  background: #373E52 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 #161922 !important;
+}
+
+/* ── Botão Dev no Menu HUD ── */
 #btn-open-dev-tools {
-  background: #2D1B4E;
-  color: #D8B4FE;
-  border: 1.5px solid #A855F7;
+  background: #2D3344;
+  color: #DDD6FE;
+  border: 2px solid #7C3AED;
+  box-shadow: 0 3px 0 #161922;
 }
 
 #btn-open-dev-tools:hover {
-  background: #3B1F68;
-  color: #FAF5FF;
+  background: #373E52;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 0 #161922;
 }
 
 /* ── Caderno de Códigos (Aba Secreta no Livro) ── */
@@ -7019,23 +8101,25 @@ body.garden-decoration-mode #game-canvas:active {
 
 .caderno-stats-banner {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   flex-wrap: wrap;
-  background: #1E293B;
-  color: #CBD5E1;
+  background: #232733;
+  color: #EDEFEA;
   padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid #334155;
+  border-radius: 10px;
+  border: 2px solid #32384A;
+  box-shadow: 0 2px 0 #12141A;
   font-size: 11px;
   margin-bottom: 12px;
 }
 
 .caderno-badge {
-  background: #6B21A8;
-  color: #F3E8FF;
+  background: #3B1B54;
+  color: #DDD6FE;
+  border: 1px solid #7C3AED;
   padding: 2px 8px;
-  border-radius: 10px;
+  border-radius: 6px;
   font-weight: 700;
   font-size: 10px;
 }
@@ -7050,20 +8134,20 @@ body.garden-decoration-mode #game-canvas:active {
 }
 
 .caderno-code-card {
-  background: #0F172A;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  padding: 8px 10px;
+  background: #232733;
+  border: 1.5px solid #32384A;
+  border-radius: 10px;
+  padding: 8px 12px;
   font-size: 12px;
 }
 
 .caderno-code-card.is-discovered {
-  border-left: 4px solid #A855F7;
+  border-left: 4px solid #7C3AED;
 }
 
 .caderno-code-card.is-locked {
-  border-left: 4px solid #64748B;
-  opacity: 0.7;
+  border-left: 4px solid #4B5563;
+  opacity: 0.65;
 }
 
 .caderno-code-header {
@@ -7076,56 +8160,161 @@ body.garden-decoration-mode #game-canvas:active {
 .caderno-code-phrase {
   font-style: italic;
   font-weight: 600;
-  color: #F8FAFC;
+  color: #EDEFEA;
 }
 
 .caderno-code-badge {
   font-size: 9px;
   padding: 2px 6px;
-  border-radius: 8px;
-  background: #2E1065;
-  color: #D8B4FE;
+  border-radius: 6px;
+  background: #3B1B54;
+  color: #DDD6FE;
   font-weight: 700;
 }
 
 .caderno-code-badge.locked {
-  background: #1E293B;
-  color: #94A3B8;
+  background: #1A1D24;
+  color: #9AA0B2;
 }
 
 .caderno-code-meaning {
   font-size: 11px;
-  color: #94A3B8;
+  color: #9AA0B2;
 }
 
 .caderno-countersigns-section {
   margin-top: 14px;
-  border-top: 1px dashed #334155;
+  border-top: 1px dashed #32384A;
   padding-top: 10px;
 }
 
 .caderno-section-title {
   font-size: 12px;
-  color: #C084FC;
+  color: #DDD6FE;
   margin: 0 0 8px 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .caderno-countersign-card {
-  background: #1E293B;
-  border-radius: 6px;
+  background: #232733;
+  border: 1px solid #32384A;
+  border-radius: 8px;
   padding: 6px 10px;
   margin-bottom: 6px;
   font-size: 11px;
 }
 
 .caderno-countersign-card .cs-prompt {
-  color: #CBD5E1;
+  color: #9AA0B2;
   margin-bottom: 2px;
 }
 
 .caderno-countersign-card .cs-response {
-  color: #34D399;
+  color: #A7F3D0;
+  font-weight: 700;
 }
 
+/* ── Dimensionamento Consistente dos Ícones SVG ── */
+.subsolo-svg-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.hud-svg-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.subsolo-btn-svg {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: text-bottom;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.modal-title-icon svg,
+.modal-title-icon .hud-svg-icon {
+  width: 22px;
+  height: 22px;
+  vertical-align: middle;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.btn-subsolo-action svg,
+.btn-subsolo-alert svg,
+.btn-transfer svg,
+.btn-secret-submit svg,
+.btn-secret-dismiss svg {
+  width: 15px;
+  height: 15px;
+  display: inline-block;
+  vertical-align: text-bottom;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.slot-title svg,
+.col-header h3 svg {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.bench-icon svg,
+.alert-icon svg,
+.trenchcoat-icon svg {
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.badge-icon svg {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.quote-assist-pill svg,
+.stock-info svg,
+.stock-status-pill svg {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.hud-pill .icon svg {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.btn-hud.subsolo-btn .icon svg {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
