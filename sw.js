@@ -1,10 +1,10 @@
 // FloristEver Service Worker
-const CACHE_NAME = 'floristever-v78';
+const CACHE_NAME = 'floristever-v84';
 const ASSETS_TO_CACHE = [
   './',
   './docs/FloristEver_Termos_e_Condicoes.md',
   './imagens/icons/app-icon.ico',
-  './imagens/icons/favicon.png',
+  './imagens/icons/favicon-v2.png',
   './imagens/icons/icon-1024.png',
   './imagens/icons/icon-128.png',
   './imagens/icons/icon-144.png',
@@ -21,9 +21,13 @@ const ASSETS_TO_CACHE = [
   './imagens/icons/icon-64.png',
   './imagens/icons/icon-72.png',
   './imagens/icons/icon-96.png',
-  './imagens/logo.jpeg',
+  './imagens/FloristEver_com_fundo_1x1.svg',
+  './imagens/Logótipo sem fundo FloristEver.png',
   './imagens/logo.svg',
-  './imagens/logo.wbmp',
+  './cinematics/floristever-intro.html',
+  './cinematics/floristever-intro.js',
+  './cinematics/subsolo-intro.html',
+  './cinematics/subsolo-intro.js',
   './index.html',
   './js/assets.js',
   './js/audio.js',

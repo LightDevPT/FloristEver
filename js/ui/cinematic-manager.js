@@ -2,12 +2,12 @@ const CINEMATICS = Object.freeze({
   floristever: Object.freeze({
     id: 'floristever-intro',
     title: 'Apresentação do FloristEver',
-    src: new URL('../../cinematic-assets/floristever.html', import.meta.url).href
+    src: new URL('../../cinematics/floristever-intro.html', import.meta.url).href
   }),
   subsolo: Object.freeze({
     id: 'subsolo-intro',
     title: 'Apresentação do Subsolo',
-    src: new URL('../../cinematic-assets/subsolo.html', import.meta.url).href
+    src: new URL('../../cinematics/subsolo-intro.html', import.meta.url).href
   })
 });
 
@@ -25,6 +25,7 @@ export class CinematicManager {
     this.error = document.getElementById('cinematic-error');
     this.errorMessage = document.getElementById('cinematic-error-message');
     this.retryButton = document.getElementById('cinematic-retry');
+    this.skipButton = document.getElementById('cinematic-skip');
     this.gameRoot = document.getElementById('game-container');
     this.active = null;
     this.loadTimeout = null;
@@ -40,6 +41,7 @@ export class CinematicManager {
       || !this.error
       || !this.errorMessage
       || !this.retryButton
+      || !this.skipButton
     ) {
       throw new Error('The cinematic overlay is missing required elements.');
     }
@@ -49,6 +51,7 @@ export class CinematicManager {
     this.frame.addEventListener('load', this.handleFrameLoad);
     window.addEventListener('resize', this.handleResize);
     this.retryButton.addEventListener('click', () => this.retry());
+    this.skipButton.addEventListener('click', () => this.skip());
   }
 
   get isPlaying() {
@@ -226,6 +229,11 @@ export class CinematicManager {
     if (!this.active) return;
     this.loadActiveCinematic();
     this.frame.focus();
+  }
+
+  skip() {
+    if (!this.active || this.error.classList.contains('hidden')) return;
+    this.complete(this.active);
   }
 
   close(active = this.active) {

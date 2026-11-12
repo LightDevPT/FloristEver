@@ -8,6 +8,12 @@
   "description": "Um jogo acolhedor de cultivo de flores, gestão de loja e criação de ramos artesanais.",
   "icons": [
     {
+      "src": "imagens/FloristEver_com_fundo_1x1.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
       "src": "imagens/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",

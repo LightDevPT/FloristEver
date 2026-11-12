@@ -4168,11 +4168,16 @@ body.garden-decoration-mode #game-canvas:active {
 }
 
 .game-logo {
-  font-size: 42px;
-  font-weight: 900;
-  color: var(--color-raspberry-pink);
-  text-shadow: 2px 2px 0 var(--color-deep-green);
-  margin-bottom: 8px;
+  width: min(100%, 430px);
+  margin: 0 auto 8px;
+  line-height: 0;
+}
+
+.game-logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .tagline {
@@ -4494,10 +4499,6 @@ body.garden-decoration-mode #game-canvas:active {
     :root[data-visual-theme="jardim_coracoes"] .progress-bar-fill {
       background: linear-gradient(90deg, #C92F62, #FFC94A);
     }
-  }
-
-  .start-onboarding-card .game-logo {
-    font-size: clamp(30px, 9vw, 40px);
   }
 
   .start-onboarding-card .tagline {
@@ -4934,10 +4935,6 @@ body.garden-decoration-mode #game-canvas:active {
 
   .start-card {
     padding: clamp(22px, 7vw, 36px) clamp(18px, 6vw, 48px);
-  }
-
-  .game-logo {
-    font-size: clamp(32px, 10vw, 42px);
   }
 
   .tagline {

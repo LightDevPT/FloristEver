@@ -9,6 +9,10 @@ const requiredFiles = [
   'style.css',
   'manifest.json',
   'sw.js',
+  'imagens/logo.svg',
+  'imagens/icons/favicon-v2.png',
+  'imagens/FloristEver_com_fundo_1x1.svg',
+  'imagens/Logótipo sem fundo FloristEver.png',
   'musicas/TrilhaSonara-defundo.ogg',
   'FloristEver_Termos_e_Condicoes.md',
   '_headers',
@@ -26,7 +30,11 @@ const requiredFiles = [
   'js/ui/developer-tools.js',
   'js/ui/cinematic-manager.js',
   'cinematic-assets/floristever.html',
-  'cinematic-assets/subsolo.html'
+  'cinematic-assets/subsolo.html',
+  'cinematics/floristever-intro.html',
+  'cinematics/floristever-intro.js',
+  'cinematics/subsolo-intro.html',
+  'cinematics/subsolo-intro.js'
 ];
 
 const errors = [];
@@ -42,17 +50,54 @@ if (errors.length === 0) {
   const dom = new JSDOM(html);
   const document = dom.window.document;
   const csp = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+  const webLogo = document.querySelector('link[rel="icon"][type="image/svg+xml"]');
+  const webPngIcon = document.querySelector('link[rel="icon"][type="image/png"]');
+  const appLogo = document.querySelector('#loading-brand-logo');
+  const onboardingLogo = document.querySelector('.game-logo img');
+  const hudLogo = document.getElementById('game-hud-logo');
+  const manifest = JSON.parse(fs.readFileSync(path.join(DIST, 'manifest.json'), 'utf8'));
   const cinematicOverlay = document.getElementById('cinematic-overlay');
   const cinematicHeaders = fs.readFileSync(path.join(DIST, '_headers'), 'utf8');
   const cinematicPages = [
     'cinematic-assets/floristever',
     'cinematic-assets/subsolo'
   ];
+  const integratedCinematicPages = [
+    {
+      page: 'cinematics/floristever-intro',
+      script: 'cinematics/floristever-intro.js',
+      scriptSource: './floristever-intro.js'
+    },
+    {
+      page: 'cinematics/subsolo-intro',
+      script: 'cinematics/subsolo-intro.js',
+      scriptSource: './subsolo-intro.js'
+    }
+  ];
   if (!csp?.getAttribute('content')?.includes("object-src 'none'")) {
     errors.push('Missing or weak Content-Security-Policy meta tag.');
   }
   if (!/floristEverBuildInfo\s*=\s*Object\.freeze\(\{"devMode":(?:true|false)\}\)/.test(buildInfo)) {
     errors.push('Missing or invalid app build mode configuration.');
+  }
+  if (
+    webLogo?.getAttribute('href') !== 'imagens/logo.svg'
+    || webPngIcon?.getAttribute('href') !== 'imagens/icons/favicon-v2.png'
+    || onboardingLogo?.getAttribute('src') !== 'imagens/Logótipo sem fundo FloristEver.png'
+  ) {
+    errors.push('The web app is missing the configured FloristEver wordmark.');
+  }
+  if (fs.existsSync(path.join(DIST, 'imagens', 'icons', 'favicon.png'))) {
+    errors.push('The legacy web favicon must not be included in the web build.');
+  }
+  if (hudLogo) {
+    errors.push('The FloristEver logo must not be displayed in the game HUD.');
+  }
+  if (appLogo?.getAttribute('src') !== 'imagens/FloristEver_com_fundo_1x1.svg') {
+    errors.push('The app loading screen is missing its configured logo.');
+  }
+  if (!manifest.icons?.some((icon) => icon.src === 'imagens/FloristEver_com_fundo_1x1.svg')) {
+    errors.push('The PWA manifest is missing the configured app logo.');
   }
   const loginApiBase = document.querySelector('meta[name="light-login-api-base"]')?.content;
   if (!loginApiBase || !/^https?:\/\/[^/]+\/api\/v1$/.test(loginApiBase)) {
@@ -72,6 +117,8 @@ if (errors.length === 0) {
   if (
     !cinematicOverlay
     || !document.getElementById('cinematic-frame')
+    || !document.getElementById('cinematic-retry')
+    || !document.getElementById('cinematic-skip')
     || !document.getElementById('btn-replay-floristever-cinematic')
     || !document.getElementById('btn-replay-subsolo-cinematic')
   ) {
@@ -111,6 +158,36 @@ if (errors.length === 0) {
       errors.push(`${page}.html must allow same-origin embedding and its original inline animation.`);
     }
   }
+  const cinematicManager = fs.readFileSync(path.join(DIST, 'js', 'ui', 'cinematic-manager.js'), 'utf8');
+  if (
+    !cinematicManager.includes('../../cinematics/floristever-intro.html')
+    || !cinematicManager.includes('../../cinematics/subsolo-intro.html')
+  ) {
+    errors.push('The cinematic manager must load the iOS-compatible integrated animations.');
+  }
+  for (const { page, script, scriptSource } of integratedCinematicPages) {
+    const cinematicHtml = fs.readFileSync(path.join(DIST, `${page}.html`), 'utf8');
+    const cinematicDocument = new JSDOM(cinematicHtml).window.document;
+    const cinematicScript = fs.readFileSync(path.join(DIST, script), 'utf8');
+    if (
+      !cinematicDocument.querySelector('canvas')
+      || !cinematicDocument.querySelector('.bar')
+      || !cinematicDocument.querySelector(`script[src="${scriptSource}"]`)
+      || !cinematicScript.includes('DUR=46')
+      || !cinematicScript.includes("typeof x.roundRect==='function'")
+      || !cinematicScript.includes('quadraticCurveTo')
+    ) {
+      errors.push(`${page}.html is missing its external animation script or Safari canvas compatibility.`);
+    }
+    if (
+      !cinematicHeaders.includes(`/${page}.html\n  Content-Security-Policy:`)
+      || !cinematicHeaders.includes('frame-ancestors \'self\'')
+      || !cinematicHeaders.includes('X-Frame-Options: SAMEORIGIN')
+      || !cinematicHeaders.includes("script-src 'self' 'unsafe-inline'")
+    ) {
+      errors.push(`${page}.html must allow same-origin embedding and its animation script.`);
+    }
+  }
   const gameTutorial = document.getElementById('game-tutorial');
   const serviceWorker = fs.readFileSync(path.join(DIST, 'sw.js'), 'utf8');
   const audioController = fs.readFileSync(path.join(DIST, 'js/audio.js'), 'utf8');
@@ -127,6 +204,9 @@ if (errors.length === 0) {
   const precacheMatch = /const ASSETS_TO_CACHE = (\[[\s\S]*?\]);/.exec(serviceWorker);
   const sourceCacheVersion = /const CACHE_NAME = '([^']+)'/.exec(sourceServiceWorker)?.[1];
   const buildCacheVersion = /const CACHE_NAME = '([^']+)'/.exec(serviceWorker)?.[1];
+  if (sourceServiceWorker.includes('./imagens/icons/favicon.png')) {
+    errors.push('The service worker must not cache the legacy web favicon.');
+  }
   let precachedAssets = [];
   try {
     if (!precacheMatch) throw new Error('ASSETS_TO_CACHE was not found.');

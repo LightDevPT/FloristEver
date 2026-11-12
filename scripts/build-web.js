@@ -10,7 +10,7 @@ const ADDITIONAL_FILES = [
     destination: 'FloristEver_Termos_e_Condicoes.md'
   }
 ];
-const DIRECTORIES = ['js', 'imagens', 'musicas', 'cinematic-assets'];
+const DIRECTORIES = ['js', 'imagens', 'musicas', 'cinematic-assets', 'cinematics'];
 const LOGIN_API_ORIGIN = new URL(process.env.LOGIN_API_ORIGIN || 'https://floristever.netlify.app').origin;
 const LOGIN_API_BASE = `${LOGIN_API_ORIGIN}/api/v1`;
 
@@ -126,6 +126,12 @@ function writeSecurityHeaderFiles() {
     '  X-Frame-Options: SAMEORIGIN',
     '/cinematic-assets/subsolo.html',
     `  Content-Security-Policy: ${cinematicCsp}`,
+    '  X-Frame-Options: SAMEORIGIN',
+    '/cinematics/floristever-intro.html',
+    `  Content-Security-Policy: ${cinematicCsp}`,
+    '  X-Frame-Options: SAMEORIGIN',
+    '/cinematics/subsolo-intro.html',
+    `  Content-Security-Policy: ${cinematicCsp}`,
     '  X-Frame-Options: SAMEORIGIN'
   ].join('\n');
 
@@ -140,7 +146,7 @@ function writeSecurityHeaderFiles() {
     '  Header always set X-Frame-Options "DENY"',
     '  Header always set X-Permitted-Cross-Domain-Policies "none"',
     '  Header always set Permissions-Policy "accelerometer=(), ambient-light-sensor=(), autoplay=(self), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), usb=()"',
-    '  <FilesMatch "^(floristever|subsolo)\\.html$">',
+    '  <FilesMatch "^(floristever|subsolo)(-intro)?\\.html$">',
     `    Header always set Content-Security-Policy "${cinematicCsp}"`,
     '    Header always set X-Frame-Options "SAMEORIGIN"',
     '  </FilesMatch>',
