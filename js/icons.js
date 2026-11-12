@@ -183,6 +183,24 @@ export const ICONS = {
     <path d="M11 15C11 14 12 13 13 13" stroke="#FCA5A5" stroke-width="1.6" stroke-linecap="round"/>
   </svg>`,
 
+  subsoloMoon: `<svg class="subsolo-svg-icon icon-moon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M19.5 15.5A8 8 0 0 1 8.5 4.5A8.5 8.5 0 1 0 19.5 15.5Z" fill="#312E81" stroke="#A78BFA" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M17 4V8M15 6H19M21 10V13M19.5 11.5H22.5" stroke="#C4B5FD" stroke-width="1.4" stroke-linecap="round"/>
+  </svg>`,
+
+  subsoloClock: `<svg class="subsolo-svg-icon icon-clock" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <circle cx="12" cy="12" r="9" stroke="#7DD3FC" stroke-width="2"/>
+    <path d="M12 7V12L15.5 14" stroke="#E0F2FE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`,
+
+  subsoloRespect: `<svg class="subsolo-svg-icon icon-respect" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#C084FC" stroke="#A855F7" stroke-width="1.5" stroke-linejoin="round"/>
+  </svg>`,
+
+  subsoloArrow: `<svg class="subsolo-svg-icon icon-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M4 12H20M14 6L20 12L14 18" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`,
+
   subsoloMala: `<svg class="subsolo-svg-icon icon-mala" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <rect x="3" y="7" width="18" height="13" rx="2" fill="#1E293B" stroke="#94A3B8" stroke-width="2"/>
     <path d="M9 7V4C9 3.4 9.4 3 10 3H14C14.6 3 15 3.4 15 4V7" stroke="#94A3B8" stroke-width="1.8" stroke-linecap="round"/>

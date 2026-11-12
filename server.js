@@ -58,6 +58,19 @@ const SECURITY_HEADERS = {
     'usb=()'
   ].join(', ')
 };
+const CINEMATIC_PATHS = new Set([
+  '/cinematic-assets/floristever.html',
+  '/cinematic-assets/subsolo.html'
+]);
+const CINEMATIC_SECURITY_HEADERS = {
+  ...SECURITY_HEADERS,
+  'Content-Security-Policy': SECURITY_HEADERS['Content-Security-Policy']
+    .replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+    .replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")
+    .replace("style-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com")
+    .replace("font-src 'self' data:", "font-src 'self' data: https://fonts.gstatic.com"),
+  'X-Frame-Options': 'SAMEORIGIN'
+};
 
 function send(res, statusCode, body, headers = {}) {
   res.writeHead(statusCode, { ...SECURITY_HEADERS, ...headers });
@@ -101,7 +114,10 @@ const server = http.createServer((req, res) => {
       'Content-Type': MIME[ext] || 'application/octet-stream',
       'Cache-Control': ext === '.html' ? 'no-store' : 'no-cache'
     };
-    res.writeHead(200, { ...SECURITY_HEADERS, ...headers });
+    const securityHeaders = CINEMATIC_PATHS.has(reqPath)
+      ? CINEMATIC_SECURITY_HEADERS
+      : SECURITY_HEADERS;
+    res.writeHead(200, { ...securityHeaders, ...headers });
     if (req.method === 'HEAD') res.end();
     else res.end(data);
   });

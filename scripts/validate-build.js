@@ -13,6 +13,7 @@ const requiredFiles = [
   'FloristEver_Termos_e_Condicoes.md',
   '_headers',
   'js/main.js',
+  'js/build-info.js',
   'js/day-night.js',
   'js/theme-manager.js',
   'js/themes/halloween.js',
@@ -22,7 +23,10 @@ const requiredFiles = [
   'js/themes/hearts-garden.js',
   'js/ui/account.js',
   'js/ui/game-tutorial.js',
-  'js/ui/developer-tools.js'
+  'js/ui/developer-tools.js',
+  'js/ui/cinematic-manager.js',
+  'cinematic-assets/floristever.html',
+  'cinematic-assets/subsolo.html'
 ];
 
 const errors = [];
@@ -34,11 +38,21 @@ for (const file of requiredFiles) {
 
 if (errors.length === 0) {
   const html = fs.readFileSync(path.join(DIST, 'index.html'), 'utf8');
+  const buildInfo = fs.readFileSync(path.join(DIST, 'js', 'build-info.js'), 'utf8');
   const dom = new JSDOM(html);
   const document = dom.window.document;
   const csp = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+  const cinematicOverlay = document.getElementById('cinematic-overlay');
+  const cinematicHeaders = fs.readFileSync(path.join(DIST, '_headers'), 'utf8');
+  const cinematicPages = [
+    'cinematic-assets/floristever',
+    'cinematic-assets/subsolo'
+  ];
   if (!csp?.getAttribute('content')?.includes("object-src 'none'")) {
     errors.push('Missing or weak Content-Security-Policy meta tag.');
+  }
+  if (!/floristEverBuildInfo\s*=\s*Object\.freeze\(\{"devMode":(?:true|false)\}\)/.test(buildInfo)) {
+    errors.push('Missing or invalid app build mode configuration.');
   }
   const loginApiBase = document.querySelector('meta[name="light-login-api-base"]')?.content;
   if (!loginApiBase || !/^https?:\/\/[^/]+\/api\/v1$/.test(loginApiBase)) {
@@ -54,6 +68,48 @@ if (errors.length === 0) {
   }
   if (!document.getElementById('modal-terms') || !document.getElementById('terms-document')) {
     errors.push('Terms viewer is missing from the onboarding screen.');
+  }
+  if (
+    !cinematicOverlay
+    || !document.getElementById('cinematic-frame')
+    || !document.getElementById('btn-replay-floristever-cinematic')
+    || !document.getElementById('btn-replay-subsolo-cinematic')
+  ) {
+    errors.push('The cinematic overlay or replay settings are missing from the web build.');
+  }
+  const subsoloStationShortcuts = [
+    'btn-subsolo-cultivo',
+    'btn-subsolo-secagem',
+    'btn-subsolo-prep',
+    'btn-subsolo-logistica'
+  ];
+  if (
+    subsoloStationShortcuts.some((id) => document.getElementById(id))
+    || !document.getElementById('btn-subsolo-settings')
+  ) {
+    errors.push('SubSolo station panels must be opened from their world locations and settings must remain accessible.');
+  }
+  for (const page of cinematicPages) {
+    const cinematicHtml = fs.readFileSync(path.join(DIST, `${page}.html`), 'utf8');
+    const cinematicDocument = new JSDOM(cinematicHtml).window.document;
+    if (
+      !cinematicDocument.querySelector('canvas')
+      || !cinematicDocument.querySelector('.bar')
+      || !cinematicDocument.querySelector('#pp')
+      || !cinematicDocument.querySelector('#rp')
+      || !cinematicDocument.querySelector('#pr')
+      || ![...cinematicDocument.querySelectorAll('script')].some((script) => script.textContent.includes('DUR=46'))
+    ) {
+      errors.push(`${page}.html is missing its original animation canvas, controls, or 46-second timeline.`);
+    }
+    if (
+      !cinematicHeaders.includes(`/${page}.html\n  Content-Security-Policy:`)
+      || !cinematicHeaders.includes('frame-ancestors \'self\'')
+      || !cinematicHeaders.includes('X-Frame-Options: SAMEORIGIN')
+      || !cinematicHeaders.includes("script-src 'self' 'unsafe-inline'")
+    ) {
+      errors.push(`${page}.html must allow same-origin embedding and its original inline animation.`);
+    }
   }
   const gameTutorial = document.getElementById('game-tutorial');
   const serviceWorker = fs.readFileSync(path.join(DIST, 'sw.js'), 'utf8');
@@ -236,7 +292,7 @@ if (errors.length === 0) {
 
 try {
   const manifest = JSON.parse(fs.readFileSync(path.join(DIST, 'manifest.json'), 'utf8'));
-  if (manifest.display !== 'standalone') errors.push('manifest.json display should be standalone.');
+  if (manifest.display !== 'fullscreen') errors.push('manifest.json display should be fullscreen.');
   if (!manifest.start_url) errors.push('manifest.json missing start_url.');
 } catch (error) {
   errors.push(`Invalid manifest.json: ${error.message}`);

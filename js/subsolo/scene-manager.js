@@ -59,6 +59,10 @@ export class SceneManager {
     if (!SUBSOLO_ENABLED) return false;
     if (this.isTransitioning() || this.currentState !== SCENE_STATES.SUPERFICIE) return false;
     if (this.isDebounced) return false;
+    if (this.game.cinematicManager && !this.game.cinematicManager.hasSeen('subsolo')) {
+      this.game.cinematicManager.playIfNeeded('subsolo', () => this.startDescer());
+      return false;
+    }
 
     this.isDebounced = true;
     this.currentState = SCENE_STATES.TRANSICAO_DESCER;

@@ -87,6 +87,9 @@ export function createDefaultSubsoloState() {
       paginasDescobertas: ['code_ramo_1'],
       versaoDicionario: 1
     },
+    tutorial: {
+      completed: false
+    },
     saturacao: {
       ramo: 0,
       maco: 0,
@@ -337,12 +340,11 @@ export class SubsoloManager {
   // --- Dínamo Manual e Recursos (Anti-softlock) ---
 
   crankManualDynamo() {
-    // Tocar gera +15 energia imediata; nunca deixa o jogador sem saída
-    this.data.recursos.energia = Math.min(
-      this.data.recursos.maxEnergia,
-      this.data.recursos.energia + 15
-    );
-    return true;
+    const energy = this.data.recursos.energia;
+    const maxEnergy = this.data.recursos.maxEnergia;
+    const gained = Math.max(0, Math.min(15, maxEnergy - energy));
+    this.data.recursos.energia = energy + gained;
+    return gained;
   }
 
   buyFuel(amountLitres = 20) {

@@ -33,7 +33,7 @@ export const SUBSOLO_VARIETIES = Object.freeze({
     yieldLeaves: 6,
     odorRate: 1.0,
     seedCost: 500,
-    icon: '🌿',
+    icon: 'subsoloCultivo',
     color: '#4FA868',
     description: 'Variedade rústica com folhas resistentes que crescem bem sob lâmpadas fracas.'
   },
@@ -46,7 +46,7 @@ export const SUBSOLO_VARIETIES = Object.freeze({
     yieldLeaves: 8,
     odorRate: 0.5, // Baixo odor
     seedCost: 1200,
-    icon: '🔮',
+    icon: 'subsoloMoon',
     color: '#8A5FB8',
     description: 'Aroma subtil e discreto, ideal para reduzir o Odor no túnel.'
   },
@@ -59,7 +59,7 @@ export const SUBSOLO_VARIETIES = Object.freeze({
     yieldLeaves: 5,
     odorRate: 1.3,
     seedCost: 1800,
-    icon: '🍂',
+    icon: 'subsoloHeat',
     color: '#D49244',
     description: 'Ciclo rápido e folhas douradas, mas produz mais resíduo e Odor.'
   },
@@ -72,7 +72,7 @@ export const SUBSOLO_VARIETIES = Object.freeze({
     yieldLeaves: 12,
     odorRate: 2.0,
     seedCost: 3500,
-    icon: '✨',
+    icon: 'subsoloHarvest',
     color: '#DDAA33',
     description: 'A cepa lendária do Subsolo: rendimento excecional e valor muito elevado.'
   }
@@ -94,7 +94,7 @@ export const SUBSOLO_PRODUCTS = Object.freeze({
     baseValue: 7920, // 18u
     prepTimeSeconds: 3 * 60, // 3 min por lote
     requiredRespect: 1,
-    icon: '📦',
+    icon: 'subsoloMala',
     description: 'Duas folhas secas selecionadas, atadas de forma limpa e discreta.'
   },
   maco: {
@@ -105,7 +105,7 @@ export const SUBSOLO_PRODUCTS = Object.freeze({
     baseValue: 12320, // 28u
     prepTimeSeconds: 5 * 60, // 5 min
     requiredRespect: 6,
-    icon: '🎁',
+    icon: 'bouquet',
     description: 'Composição de cinco folhas secas de alta qualidade com acabamento cuidado.'
   },
   reserva: {
@@ -116,7 +116,7 @@ export const SUBSOLO_PRODUCTS = Object.freeze({
     baseValue: 21120, // 48u
     prepTimeSeconds: 8 * 60, // 8 min
     requiredRespect: 10,
-    icon: '👑',
+    icon: 'subsoloShield',
     description: 'Lote supremo com dez folhas maturadas e seladas em pano escuro.'
   }
 });

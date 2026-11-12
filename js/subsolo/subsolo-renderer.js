@@ -5,6 +5,7 @@
 
 import { PALETTE_SUBSOLO, SUBSOLO_VARIETIES, SUBSOLO_PRODUCTS } from './subsolo-config.js';
 import { formatNumber } from '../utils.js';
+import { assetManager } from '../assets.js';
 
 export class SubsoloRenderer {
   constructor(game, subsoloManager) {
@@ -46,7 +47,7 @@ export class SubsoloRenderer {
 
     // 1. Fundo do Túnel de Esgoto Acolhedor
     ctx.save();
-    ctx.fillStyle = '#222528';
+    ctx.fillStyle = '#171B20';
     ctx.fillRect(0, 0, viewW, viewH);
 
     // Paredes de tijolo cartoon
@@ -231,47 +232,71 @@ export class SubsoloRenderer {
 
   drawGrowRoom(ctx, startX, y, canteiros) {
     ctx.save();
+    ctx.textBaseline = 'middle';
     ctx.fillStyle = '#E5E8EB';
-    ctx.font = 'bold 11px sans-serif';
+    ctx.font = '800 12px "Quicksand", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('CULTIVO', startX + 75, y - 25);
+    ctx.fillText('CULTIVO UV', startX + 75, y - 31);
 
-    // Lâmpada de cultivo suspensa (Luz roxa/UV)
+    // Estrutura de estufa 2D: moldura escura, luz indireta e quatro canteiros.
+    ctx.fillStyle = '#20252C';
+    ctx.fillRect(startX - 14, y - 14, 178, 116);
+    ctx.strokeStyle = '#39434D';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(startX - 14, y - 14, 178, 116);
     ctx.fillStyle = PALETTE_SUBSOLO.growLight;
-    ctx.fillRect(startX - 10, y - 20, 170, 8);
+    ctx.fillRect(startX - 4, y - 7, 158, 5);
     ctx.fillStyle = PALETTE_SUBSOLO.growGlow;
     ctx.beginPath();
-    ctx.moveTo(startX - 15, y - 12);
-    ctx.lineTo(startX + 165, y - 12);
-    ctx.lineTo(startX + 180, y + 85);
-    ctx.lineTo(startX - 30, y + 85);
+    ctx.moveTo(startX - 4, y - 2);
+    ctx.lineTo(startX + 154, y - 2);
+    ctx.lineTo(startX + 154, y + 89);
+    ctx.lineTo(startX - 4, y + 89);
     ctx.closePath();
     ctx.fill();
 
-    // Canteiros de terra no chão
+    // A planta usa os mesmos estágios de desenho do jardim (semente, broto, botão, madura).
     canteiros.slice(0, 4).forEach((plot, index) => {
-      const px = startX + (index % 2) * 80;
-      const py = y + Math.floor(index / 2) * 45;
+      const px = startX + 2 + (index % 2) * 78;
+      const py = y + 2 + Math.floor(index / 2) * 43;
+      const variety = SUBSOLO_VARIETIES[plot.varietyId] || SUBSOLO_VARIETIES.sombra_verde;
+      const progress = plot.status === 'ready' ? 1 : plot.status === 'growing' ? Math.max(0, Math.min(0.99, plot.progress || 0)) : 0;
 
-      ctx.fillStyle = '#3E342F';
-      ctx.fillRect(px, py, 68, 36);
-      ctx.strokeStyle = '#2A231F';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(px, py, 68, 36);
+      ctx.fillStyle = '#302923';
+      ctx.strokeStyle = '#634C3A';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(px, py, 72, 38, 7);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#514031';
+      for (let furrow = 0; furrow < 3; furrow++) {
+        ctx.fillRect(px + 7, py + 8 + furrow * 10, 58, 2);
+      }
 
-      // Planta a crescer
-      if (plot.status === 'growing' || plot.status === 'ready') {
-        const height = Math.max(6, plot.progress * 26);
-        ctx.fillStyle = plot.status === 'ready' ? '#68D67F' : '#4FA868';
+      if (plot.status !== 'empty') {
+        const flowerVisual = {
+          id: `subsolo-${variety.id}`,
+          name: variety.name,
+          radius: 5,
+          petals: 5,
+          color: variety.color,
+          centerColor: '#E8C56A',
+          stemColor: '#6E9B67',
+          outlineColor: '#29372C'
+        };
+        assetManager.drawFlower(ctx, px + 36, py + 28, flowerVisual, progress, this.rats[index % this.rats.length]?.timer || 0);
+      } else {
+        ctx.fillStyle = '#98816C';
         ctx.beginPath();
-        ctx.arc(px + 34, py + 30 - height, 6 + plot.progress * 5, 0, Math.PI * 2);
+        ctx.ellipse(px + 36, py + 27, 5, 2, 0, 0, Math.PI * 2);
         ctx.fill();
+      }
 
-        if (plot.status === 'ready') {
-          ctx.fillStyle = '#FFC857';
-          ctx.font = 'bold 9px sans-serif';
-          ctx.fillText('PRONTO', px + 34, py + 18);
-        }
+      if (plot.status === 'ready') {
+        ctx.fillStyle = '#F3D27A';
+        ctx.font = '800 8px "Quicksand", sans-serif';
+        ctx.fillText('PRONTO', px + 36, py + 7);
       }
     });
 
@@ -309,7 +334,8 @@ export class SubsoloRenderer {
       if (rack.status === 'ready') {
         ctx.fillStyle = '#FFC857';
         ctx.font = 'bold 9px sans-serif';
-        ctx.fillText('SECO ★', x + 50, y + 42);
+        ctx.fillText('SECO', x + 50, y + 42);
+        this.drawSubsoloIcon(ctx, 'check', x + 63, y + 31, 12);
       }
     }
 
@@ -350,7 +376,9 @@ export class SubsoloRenderer {
     ctx.strokeRect(x + 95, y + 25, 45, 55);
     ctx.fillStyle = '#FFFFFF';
     ctx.font = '9px sans-serif';
-    ctx.fillText(`📦 ${armazem.ramo || 0}`, x + 117, y + 55);
+    ctx.textAlign = 'left';
+    this.drawSubsoloIcon(ctx, 'box', x + 102, y + 47, 14);
+    ctx.fillText(`${armazem.ramo || 0}`, x + 120, y + 55);
 
     ctx.restore();
   }
@@ -382,6 +410,139 @@ export class SubsoloRenderer {
     ctx.restore();
   }
 
+  drawSubsoloIcon(ctx, type, x, y, size) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size / 24, size / 24);
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    switch (type) {
+      case 'coin':
+        ctx.fillStyle = '#F7C948';
+        ctx.strokeStyle = '#FCE588';
+        ctx.beginPath();
+        ctx.arc(12, 12, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = '#8A5E16';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(12, 12, 6, 0, Math.PI * 2);
+        ctx.moveTo(14, 9);
+        ctx.lineTo(10, 9);
+        ctx.lineTo(10, 12);
+        ctx.lineTo(14, 12);
+        ctx.lineTo(14, 15);
+        ctx.lineTo(10, 15);
+        ctx.stroke();
+        break;
+      case 'respect': {
+        ctx.fillStyle = '#C084FC';
+        ctx.strokeStyle = '#A855F7';
+        ctx.beginPath();
+        for (let point = 0; point < 10; point++) {
+          const angle = -Math.PI / 2 + point * Math.PI / 5;
+          const radius = point % 2 === 0 ? 10 : 4.5;
+          const px = 12 + Math.cos(angle) * radius;
+          const py = 12 + Math.sin(angle) * radius;
+          if (point === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+      }
+      case 'energy':
+        ctx.fillStyle = '#EAB308';
+        ctx.strokeStyle = '#FDE047';
+        ctx.beginPath();
+        ctx.moveTo(13, 2);
+        ctx.lineTo(5, 13);
+        ctx.lineTo(11, 13);
+        ctx.lineTo(9, 22);
+        ctx.lineTo(19, 9);
+        ctx.lineTo(13, 9);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+      case 'water':
+        ctx.fillStyle = '#06B6D4';
+        ctx.strokeStyle = '#67E8F9';
+        ctx.beginPath();
+        ctx.moveTo(12, 2);
+        ctx.bezierCurveTo(9, 7, 5, 12, 5, 16);
+        ctx.arc(12, 16, 7, Math.PI, 0);
+        ctx.bezierCurveTo(19, 12, 15, 7, 12, 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+      case 'heat':
+        ctx.fillStyle = '#EF4444';
+        ctx.strokeStyle = '#FCA5A5';
+        ctx.beginPath();
+        ctx.moveTo(12, 2);
+        ctx.bezierCurveTo(16, 7, 18, 10, 17, 15);
+        ctx.bezierCurveTo(16, 21, 7, 22, 6, 16);
+        ctx.bezierCurveTo(5, 12, 9, 8, 12, 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+      case 'leaf':
+        ctx.fillStyle = '#34D399';
+        ctx.strokeStyle = '#A7F3D0';
+        ctx.beginPath();
+        ctx.moveTo(4, 20);
+        ctx.bezierCurveTo(4, 7, 11, 3, 21, 3);
+        ctx.bezierCurveTo(21, 13, 16, 20, 4, 20);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(5, 19);
+        ctx.lineTo(16, 8);
+        ctx.stroke();
+        break;
+      case 'bag':
+        ctx.strokeStyle = '#CBD5E1';
+        ctx.beginPath();
+        ctx.roundRect(4, 8, 16, 13, 2);
+        ctx.moveTo(9, 8);
+        ctx.lineTo(9, 5);
+        ctx.quadraticCurveTo(12, 2, 15, 5);
+        ctx.lineTo(15, 8);
+        ctx.stroke();
+        break;
+      case 'box':
+        ctx.strokeStyle = '#FDE68A';
+        ctx.beginPath();
+        ctx.rect(4, 5, 16, 15);
+        ctx.moveTo(4, 10);
+        ctx.lineTo(20, 10);
+        ctx.moveTo(12, 5);
+        ctx.lineTo(12, 10);
+        ctx.stroke();
+        break;
+      case 'check':
+        ctx.strokeStyle = '#5DE27F';
+        ctx.beginPath();
+        ctx.moveTo(4, 12);
+        ctx.lineTo(9, 17);
+        ctx.lineTo(20, 6);
+        ctx.stroke();
+        break;
+      default:
+        break;
+    }
+
+    ctx.restore();
+  }
+
   drawSubsoloHud(ctx, viewW, data) {
     ctx.save();
     // Barra superior
@@ -399,30 +560,37 @@ export class SubsoloRenderer {
     ctx.textAlign = 'left';
 
     // Moedas e Respeito
-    ctx.fillText(`🪙 ${formatNumber(this.game.state.coins)}`, 16, 28);
+    this.drawSubsoloIcon(ctx, 'coin', 14, 13, 16);
+    ctx.fillText(formatNumber(this.game.state.coins), 34, 28);
     ctx.fillStyle = '#B56BFF';
-    ctx.fillText(`★ S${data.respeito.nivel} (${data.respeito.xp} XP)`, 130, 28);
+    this.drawSubsoloIcon(ctx, 'respect', 128, 13, 16);
+    ctx.fillText(`S${data.respeito.nivel} (${data.respeito.xp} XP)`, 148, 28);
 
     // Energia e Água
     ctx.fillStyle = data.recursos.energia > 20 ? '#5DE27F' : '#E85D5D';
-    ctx.fillText(`⚡ ${Math.round(data.recursos.energia)}%`, 260, 28);
+    this.drawSubsoloIcon(ctx, 'energy', 258, 13, 16);
+    ctx.fillText(`${Math.round(data.recursos.energia)}%`, 278, 28);
     ctx.fillStyle = '#5E8C8A';
-    ctx.fillText(`💧 ${Math.round(data.recursos.agua)}%`, 335, 28);
+    this.drawSubsoloIcon(ctx, 'water', 333, 13, 16);
+    ctx.fillText(`${Math.round(data.recursos.agua)}%`, 353, 28);
 
     // Calor (se ativo)
     if (!data.conteudoSecreto.modoTranquilo) {
       const calor = Math.round(data.calor.valor);
       ctx.fillStyle = calor > 70 ? '#E85D5D' : calor > 40 ? '#FFC857' : '#99A8B2';
-      ctx.fillText(`🔥 Calor: ${calor}%`, 405, 28);
+      this.drawSubsoloIcon(ctx, 'heat', 403, 13, 16);
+      ctx.fillText(`Calor: ${calor}%`, 423, 28);
     } else {
       ctx.fillStyle = '#5DE27F';
-      ctx.fillText('🕊️ Modo Tranquilo', 405, 28);
+      this.drawSubsoloIcon(ctx, 'leaf', 403, 13, 16);
+      ctx.fillText('Modo Tranquilo', 423, 28);
     }
 
     // Mala de transporte
     const malaCount = (data.mala.ramo || 0) + (data.mala.maco || 0) + (data.mala.reserva || 0);
     ctx.fillStyle = '#E5E8EB';
-    ctx.fillText(`💼 Mala: ${malaCount}/${this.manager.getMalaCapacity()}`, 540, 28);
+    this.drawSubsoloIcon(ctx, 'bag', 538, 13, 16);
+    ctx.fillText(`Mala: ${malaCount}/${this.manager.getMalaCapacity()}`, 558, 28);
 
     ctx.restore();
   }

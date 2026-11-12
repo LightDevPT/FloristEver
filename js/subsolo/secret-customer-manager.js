@@ -187,7 +187,7 @@ export class SecretCustomerManager {
 
         <div class="secret-trade-reward-banner">
           <span>Recompensa Estimada:</span>
-          <strong class="reward-val">~${estRevenue}🪙 +15 XP Respeito</strong>
+          <strong class="reward-val">~${estRevenue} ${ICONS.coin} +15 XP Respeito</strong>
         </div>
 
         <div class="secret-trade-actions">
@@ -214,7 +214,7 @@ export class SecretCustomerManager {
       const res = this.subsolo.completeSale(order, packagingId);
       if (res.success) {
         if (this.game.soundManager) this.game.soundManager.playCoin?.();
-        this.game.hud.showToast(`Venda concluída! +🪙${res.revenue} (+${res.xp} Respeito)`, 'coin');
+        this.game.hud.showToast(`Venda concluída! +${res.revenue} moedas (+${res.xp} Respeito)`, 'coin');
         modal.classList.add('hidden');
         if (this.activeCustomer) {
           this.activeCustomer.isSatisfied = true;
@@ -278,9 +278,18 @@ export class SecretCustomerManager {
 
       // Símbolo discreto (folha estilizada, não flores normais)
       ctx.fillStyle = '#B56BFF';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('🌿', c.x, c.y - 33);
+      ctx.strokeStyle = '#E9D5FF';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y - 41);
+      ctx.quadraticCurveTo(c.x + 11, c.y - 36, c.x, c.y - 26);
+      ctx.quadraticCurveTo(c.x - 10, c.y - 34, c.x, c.y - 41);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(c.x - 5, c.y - 34);
+      ctx.lineTo(c.x + 5, c.y - 33);
+      ctx.stroke();
     }
 
     ctx.restore();

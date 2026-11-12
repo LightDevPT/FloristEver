@@ -94,10 +94,11 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: var(--color-grass-light);
+  background-color: #1B1F20;
   font-family: var(--font-main);
   color: var(--color-plum-text);
   touch-action: none;
+  overscroll-behavior: none;
 }
 
 button,
@@ -126,8 +127,9 @@ textarea:focus-visible,
 }
 
 #game-container {
-  position: relative;
-  width: 100vw;
+  position: fixed;
+  inset: 0;
+  width: 100%;
   height: 100vh;
   overflow: hidden;
   display: flex;
@@ -4540,6 +4542,10 @@ body.garden-decoration-mode #game-canvas:active {
 }
 
 @media (max-width: 900px), (pointer: coarse) {
+  body.subsolo-mode #hud .hud-level {
+    display: none !important;
+  }
+
   .desktop-interaction-hint {
     display: none;
   }
@@ -6711,23 +6717,11 @@ body.subsolo-mode #modal-challenges {
   font-weight: 700 !important;
   font-size: 14px !important;
   color: #EDEFEA !important;
-  cursor: pointer;
+  cursor: default;
   user-select: none;
-  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
   position: relative;
   box-sizing: border-box;
   min-height: 40px;
-}
-
-.subsolo-pill:hover {
-  background: #2A3040 !important;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 0 #12141A !important;
-}
-
-.subsolo-pill:active {
-  transform: translateY(1px);
-  box-shadow: 0 1px 0 #12141A !important;
 }
 
 .subsolo-pill .subsolo-icon {
@@ -6846,6 +6840,48 @@ body.subsolo-mode #modal-challenges {
   flex-shrink: 0;
 }
 
+.btn-hud.subsolo-btn-icon-only {
+  width: 40px !important;
+  min-width: 40px;
+  padding: 8px !important;
+}
+
+.btn-hud.subsolo-btn .subsolo-btn-compact-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.btn-hud.subsolo-btn-dynamo {
+  color: #FDE68A !important;
+  border-color: #795C16 !important;
+}
+
+.btn-hud.subsolo-btn-dynamo:hover {
+  background: #382D16 !important;
+}
+
+.btn-hud.subsolo-btn-tutorial {
+  color: #D8B4FE !important;
+  border-color: #5B3887 !important;
+}
+
+.btn-hud.subsolo-btn-tutorial:hover {
+  background: #30243D !important;
+}
+
+.btn-hud.subsolo-btn-settings {
+  color: #A5F3FC !important;
+  border-color: #226B75 !important;
+}
+
+.btn-hud.subsolo-btn-settings:hover {
+  background: #1D343A !important;
+}
+
 /* Botão Subir: Destaque em tom esmeralda sólido */
 .btn-hud.subsolo-btn.btn-subsolo-exit {
   background: #14422E !important;
@@ -6888,16 +6924,28 @@ body.subsolo-mode #modal-challenges {
 /* ── Janelas Modais do Subsolo (Seguem .cozy-card em tons escuros) ── */
 .subsolo-modal-window.cozy-card {
   background: #1A1D24 !important;
+  color: #EDEFEA !important;
   border: 3px solid #32384A !important;
   box-shadow: 0 6px 0 #101217, 0 16px 36px rgba(0, 0, 0, 0.5) !important;
   border-radius: var(--border-radius-lg) !important;
-  width: 720px !important;
-  max-width: 95vw !important;
-  max-height: 90vh !important;
+  width: min(720px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: min(90vh, calc(100dvh - 24px)) !important;
+  min-width: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
   animation: pop-modal 0.22s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.subsolo-modal-window.cozy-card h1,
+.subsolo-modal-window.cozy-card h2,
+.subsolo-modal-window.cozy-card h3,
+.subsolo-modal-window.cozy-card h4,
+.subsolo-modal-window.cozy-card h5,
+.subsolo-modal-window.cozy-card h6,
+.subsolo-modal-window.cozy-card .subsolo-bench-status .bench-header-text > strong {
+  color: #EDEFEA !important;
 }
 
 .subsolo-modal-header {
@@ -6950,6 +6998,8 @@ body.subsolo-mode #modal-challenges {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .subsolo-modal-body .modal-intro {
@@ -7125,8 +7175,9 @@ body.subsolo-mode #modal-challenges {
 /* ── Grelha de Cartões & Canteiros Subterrâneos ── */
 .subsolo-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
   gap: 14px;
+  min-width: 0;
 }
 
 .subsolo-card-slot {
@@ -7141,6 +7192,7 @@ body.subsolo-mode #modal-challenges {
   transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.15s ease;
   position: relative;
   box-sizing: border-box;
+  min-width: 0;
 }
 
 .subsolo-card-slot:hover {
@@ -7304,6 +7356,8 @@ body.subsolo-mode #modal-challenges {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .subsolo-select {
@@ -7319,6 +7373,43 @@ body.subsolo-mode #modal-challenges {
   box-sizing: border-box;
   outline: none;
   transition: border-color 0.15s ease;
+  min-width: 0;
+}
+
+.subsolo-hud-actions button:focus-visible,
+.subsolo-modal-window button:focus-visible,
+.subsolo-modal-window select:focus-visible {
+  outline: 3px solid #93C5FD;
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .subsolo-modal-header {
+    padding: 10px 12px !important;
+  }
+
+  .subsolo-modal-body {
+    padding: 12px !important;
+  }
+
+  .subsolo-card-slot {
+    padding: 12px;
+  }
+
+  .subsolo-top-bar-controls,
+  .subsolo-batch-bar,
+  .batch-bar-left,
+  .batch-bar-right {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .subsolo-top-bar-controls > button,
+  .subsolo-batch-bar button,
+  .slot-actions > button {
+    min-height: 40px;
+  }
 }
 
 .subsolo-select:focus {
@@ -7340,6 +7431,9 @@ body.subsolo-mode #modal-challenges {
   justify-content: center;
   gap: 6px;
   transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+  max-width: 100%;
+  white-space: normal;
+  line-height: 1.25;
 }
 
 /* Variante primária (Azul / Ação padrão) */
@@ -7587,6 +7681,22 @@ button:disabled.btn-success {
   font-size: 12px;
 }
 
+.flow-arrow svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tag-value svg {
+  width: 15px;
+  height: 15px;
+  vertical-align: middle;
+}
+
+.spec-pill svg {
+  width: 14px;
+  height: 14px;
+}
+
 .subsolo-logistics-quick-actions {
   display: flex;
   align-items: center;
@@ -7724,6 +7834,8 @@ button:disabled.btn-success {
   color: #FFFFFF !important;
   cursor: pointer;
   transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+  max-width: 100%;
+  white-space: normal;
 }
 
 .btn-transfer:hover {
@@ -7797,7 +7909,7 @@ button:disabled.btn-success {
   gap: 14px;
 }
 
-@media (max-width: 900px), (max-height: 520px) {
+@media (max-width: 1100px), (max-height: 520px) {
   .subsolo-hud-layer {
     position: absolute;
     top: 0;
@@ -7888,8 +8000,22 @@ button:disabled.btn-success {
     text-align: left;
   }
 
+  .subsolo-hud-menu-items .btn-hud.subsolo-btn-icon-only {
+    width: 100% !important;
+    min-width: 0;
+  }
+
   .subsolo-hud-menu-items .btn-hud .btn-label {
-    display: inline;
+    display: inline !important;
+  }
+
+  .subsolo-hud-menu-items .btn-hud .subsolo-btn-compact-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
   }
 }
 
@@ -8080,18 +8206,42 @@ button:disabled.btn-success {
   box-shadow: 0 4px 0 #161922 !important;
 }
 
-/* ── Botão Dev no Menu HUD ── */
+/* ── Atalho Dev persistente nos modos superfície e Subsolo ── */
+#dev-tools-launcher {
+  position: fixed;
+  z-index: 45;
+  left: max(12px, env(safe-area-inset-left));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
 #btn-open-dev-tools {
+  min-width: 76px;
+  min-height: 42px;
   background: #2D3344;
   color: #DDD6FE;
   border: 2px solid #7C3AED;
   box-shadow: 0 3px 0 #161922;
+  white-space: nowrap;
+  pointer-events: auto;
 }
 
 #btn-open-dev-tools:hover {
   background: #373E52;
   transform: translateY(-2px);
   box-shadow: 0 5px 0 #161922;
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+  #dev-tools-launcher {
+    bottom: max(174px, calc(env(safe-area-inset-bottom) + 160px));
+  }
+}
+
+@media (max-width: 900px) and (max-height: 520px), (pointer: coarse) and (max-height: 520px) {
+  #dev-tools-launcher {
+    bottom: max(132px, calc(env(safe-area-inset-bottom) + 120px));
+  }
 }
 
 /* ── Caderno de Códigos (Aba Secreta no Livro) ── */
@@ -8317,4 +8467,207 @@ button:disabled.btn-success {
   display: inline-block;
   vertical-align: middle;
   flex-shrink: 0;
+}
+
+.subsolo-tutorial-overlay {
+  z-index: 1400;
+  background: rgba(8, 12, 18, 0.88);
+}
+
+.subsolo-tutorial-overlay .game-tutorial-window {
+  color: #EDEFEA;
+  background: #1A1D24;
+  border-color: #7C3AED;
+  box-shadow: 0 8px 0 #101217, 0 22px 56px rgba(0, 0, 0, 0.55);
+}
+
+.subsolo-tutorial-overlay .game-tutorial-header,
+.subsolo-tutorial-overlay .game-tutorial-footer {
+  background: #232733;
+  border-color: #32384A;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-eyebrow,
+.subsolo-tutorial-overlay .game-tutorial-kicker {
+  color: #C4B5FD;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-header h2,
+.subsolo-tutorial-overlay .game-tutorial-heading h3,
+.subsolo-tutorial-overlay .game-tutorial-step h4 {
+  color: #F3F4F6;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-progress-wrap {
+  color: #DDD6FE;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-progress-wrap progress,
+.subsolo-tutorial-overlay .game-tutorial-progress-wrap progress::-webkit-progress-bar {
+  background: #32384A;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-progress-wrap progress::-webkit-progress-value {
+  background: #A855F7;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-progress-wrap progress::-moz-progress-bar {
+  background: #A855F7;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-topics {
+  background: #1E222B;
+  border-color: #32384A;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-topic {
+  color: #C5C9D3;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-topic:hover,
+.subsolo-tutorial-overlay .game-tutorial-topic[aria-current="true"] {
+  color: #F3F4F6;
+  background: #2D3344;
+  border-color: #6D5AA8;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-topic[aria-current="true"] {
+  box-shadow: inset 3px 0 #A855F7;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-topic-number,
+.subsolo-tutorial-overlay .game-tutorial-summary,
+.subsolo-tutorial-overlay .game-tutorial-step-number,
+.subsolo-tutorial-overlay .game-tutorial-step p {
+  color: #B5BAC6;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-topic-icon,
+.subsolo-tutorial-overlay .game-tutorial-heading-icon,
+.subsolo-tutorial-overlay .game-tutorial-step-icon {
+  color: #DDD6FE;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-heading-icon,
+.subsolo-tutorial-overlay .game-tutorial-step-icon {
+  background: #302943;
+  border-color: #4B3B69;
+}
+
+.subsolo-tutorial-overlay .game-tutorial-step {
+  background: #232733;
+  border-color: #3A4050;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.18);
+}
+
+.subsolo-tutorial-overlay button:focus-visible {
+  outline: 3px solid #C4B5FD;
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .subsolo-tutorial-overlay .game-tutorial-window {
+    max-height: min(100%, calc(100dvh - 24px));
+  }
+
+  .subsolo-tutorial-overlay .game-tutorial-header {
+    gap: 8px;
+  }
+
+  .subsolo-tutorial-overlay .game-tutorial-header h2 {
+    max-width: 100%;
+  }
+}
+
+.cinematic-open {
+  overflow: hidden;
+}
+
+.cinematic-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  place-items: center;
+  background: #eef3e4;
+}
+
+.cinematic-overlay.hidden {
+  display: none !important;
+}
+
+#cinematic-overlay[data-cinematic="subsolo"] {
+  background: #12161a;
+}
+
+.cinematic-overlay iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+.cinematic-control-mask {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.cinematic-progress {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 2;
+  height: 4px;
+  overflow: hidden;
+  background: rgba(47, 107, 79, 0.45);
+}
+
+.cinematic-progress[hidden] {
+  display: none;
+}
+
+.cinematic-progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #e8527a;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+#cinematic-overlay[data-cinematic="subsolo"] .cinematic-progress {
+  background: rgba(62, 74, 82, 0.7);
+}
+
+#cinematic-overlay[data-cinematic="subsolo"] .cinematic-progress span {
+  background: #b56bff;
+}
+
+.cinematic-error {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 24px;
+  color: #fff;
+  background: rgba(16, 23, 25, 0.96);
+  text-align: center;
+}
+
+.cinematic-error.hidden {
+  display: none !important;
+}
+
+.cinematic-error p {
+  max-width: 34rem;
+  margin: 0;
 }

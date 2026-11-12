@@ -24,6 +24,7 @@ import { OptionalStoreUi } from './ui/optional-store.js';
 import { BouquetUi } from './ui/bouquet.js';
 import { TutorialManager } from './ui/tutorial.js';
 import { GameTutorial } from './ui/game-tutorial.js';
+import { CinematicManager } from './ui/cinematic-manager.js';
 import { AccountUi } from './ui/account.js';
 import {
   applyLocalFullTestProfile,
@@ -313,6 +314,7 @@ class Game {
     this.hudCustomizer = new HudCustomizer(state);
     this.tutorial = new TutorialManager(state);
     this.gameTutorial = new GameTutorial(this.hud);
+    this.cinematicManager = new CinematicManager(state, this);
 
     // Subsolo (v2.0.0)
     this.sceneManager = new SceneManager(this);
@@ -455,6 +457,11 @@ class Game {
       this.unlockAudio();
       if (this.hudCustomizer?.draft) return;
       if (this.gameTutorial?.isOpen()) return;
+      if (this.subsoloUI?.tutorial?.isOpen()) return;
+      if (this.cinematicManager?.isPlaying) {
+        e.preventDefault();
+        return;
+      }
       if (e.target.matches('input, textarea, select, [contenteditable="true"]')) return;
       if (this.compostModal && !this.compostModal.classList.contains('hidden')) return;
       if (this.bouquetUi.modalBook && !this.bouquetUi.modalBook.classList.contains('hidden')) return;
@@ -466,6 +473,10 @@ class Game {
     });
 
     window.addEventListener('keyup', (e) => {
+      if (this.cinematicManager?.isPlaying) {
+        e.preventDefault();
+        return;
+      }
       this.activeKeys.delete(e.code);
     });
 
@@ -511,6 +522,7 @@ class Game {
       }
     });
     window.addEventListener('keydown', (event) => {
+      if (this.cinematicManager?.isPlaying) return;
       if (event.key === 'Escape') setHudMenuOpen(false);
     });
 
@@ -858,7 +870,7 @@ class Game {
     }
 
     // Concessão paga → iniciar descida
-    if (!this.sceneManager?.startDescer()) {
+    if (!this.sceneManager?.startDescer() && !this.cinematicManager?.isPlaying) {
       this.hud.showToast('Não é possível descer agora.', 'info');
     }
   }
@@ -1056,6 +1068,8 @@ class Game {
     const storeNameInput = document.getElementById('store-name-input');
     const saveStoreNameBtn = document.getElementById('btn-save-store-name');
     const replayTutorialBtn = document.getElementById('btn-replay-tutorial');
+    const replayFloristCinematicBtn = document.getElementById('btn-replay-floristever-cinematic');
+    const replaySubsoloCinematicBtn = document.getElementById('btn-replay-subsolo-cinematic');
     const customizeHudButton = document.getElementById('btn-customize-hud');
     const settingsTabs = [...document.querySelectorAll('[data-settings-tab]')];
     const settingsPanels = [...document.querySelectorAll('[data-settings-panel]')];
@@ -1114,6 +1128,12 @@ class Game {
       activateSettingsTab(tabId);
       modalSettings.classList.remove('hidden');
     };
+    this.openSettings = () => {
+      if (!modalSettings) return;
+      soundManager.playClick();
+      this.developerTools.refreshAccess();
+      this.openSettingsPanel('general');
+    };
 
     if (storeNameInput) storeNameInput.value = state.storeName || 'FloristEver';
     state.subscribe((event) => {
@@ -1143,11 +1163,7 @@ class Game {
     });
 
     if (openBtn && modalSettings) {
-      openBtn.addEventListener('click', () => {
-        soundManager.playClick();
-        this.developerTools.refreshAccess();
-        this.openSettingsPanel('general');
-      });
+      openBtn.addEventListener('click', () => this.openSettings());
 
       const devBtn = document.getElementById('btn-open-dev-tools');
       if (devBtn) {
@@ -1165,7 +1181,14 @@ class Game {
         if (e.target.closest('[data-close]') || e.target === modalSettings) {
           soundManager.playClick();
           modalSettings.classList.add('hidden');
-          openBtn.focus();
+          const subsoloMenuToggle = document.getElementById('btn-toggle-subsolo-menu');
+          const subsoloSettingsButton = document.getElementById('btn-subsolo-settings');
+          const menuToggleVisible = subsoloMenuToggle
+            && getComputedStyle(subsoloMenuToggle).display !== 'none';
+          const returnFocus = this.sceneManager?.isSubsoloActive()
+            ? (menuToggleVisible ? subsoloMenuToggle : subsoloSettingsButton)
+            : openBtn;
+          returnFocus?.focus();
         }
       });
     }
@@ -1173,6 +1196,20 @@ class Game {
       soundManager.playClick();
       modalSettings?.classList.add('hidden');
       this.gameTutorial.open();
+    });
+    const replayCinematic = (key, button) => {
+      soundManager.playClick();
+      modalSettings?.classList.add('hidden');
+      this.cinematicManager.replay(key, () => {
+        this.openSettingsPanel('system');
+        button.focus();
+      });
+    };
+    replayFloristCinematicBtn?.addEventListener('click', () => {
+      replayCinematic('floristever', replayFloristCinematicBtn);
+    });
+    replaySubsoloCinematicBtn?.addEventListener('click', () => {
+      replayCinematic('subsolo', replaySubsoloCinematicBtn);
     });
     customizeHudButton?.addEventListener('click', () => {
       soundManager.playClick();
@@ -1486,6 +1523,10 @@ class Game {
     });
   }
 
+  startInitialExperience() {
+    this.cinematicManager.playIfNeeded('floristever', () => this.gameTutorial.startIfNeeded());
+  }
+
   setupStartMenu() {
     const startOverlay = document.getElementById('start-overlay');
     const loadingScreen = document.getElementById('loading-screen');
@@ -1535,7 +1576,7 @@ class Game {
         this.unlockAudio();
         soundManager.playClick();
         startOverlay.classList.add('hidden');
-        this.gameTutorial.startIfNeeded();
+        this.startInitialExperience();
       };
       const hasAcceptedCurrentTerms = () => {
         try {
@@ -1619,7 +1660,7 @@ class Game {
               localStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
             }
             startOverlay.classList.add('hidden');
-            this.gameTutorial.startIfNeeded();
+            this.startInitialExperience();
           }
         } catch (error) {
           console.error('Não foi possível restaurar a conclusão da integração:', error);
@@ -1862,7 +1903,12 @@ class Game {
     // Clamp para evitar saltos enormes quando o utilizador muda de separador
     if (dt > 0.1) dt = 0.1;
 
-    if (!this.gameTutorial?.isOpen() && !this.hudCustomizer?.draft) this.update(dt);
+    if (
+      !this.cinematicManager?.isPlaying
+      && !this.gameTutorial?.isOpen()
+      && !this.subsoloUI?.tutorial?.isOpen()
+      && !this.hudCustomizer?.draft
+    ) this.update(dt);
     this.render();
 
     requestAnimationFrame((t) => this.gameLoop(t));

@@ -10,7 +10,7 @@ const ADDITIONAL_FILES = [
     destination: 'FloristEver_Termos_e_Condicoes.md'
   }
 ];
-const DIRECTORIES = ['js', 'imagens', 'musicas'];
+const DIRECTORIES = ['js', 'imagens', 'musicas', 'cinematic-assets'];
 const LOGIN_API_ORIGIN = new URL(process.env.LOGIN_API_ORIGIN || 'https://floristever.netlify.app').origin;
 const LOGIN_API_BASE = `${LOGIN_API_ORIGIN}/api/v1`;
 
@@ -62,6 +62,16 @@ function configureLoginApi() {
   fs.writeFileSync(indexPath, configuredHtml, 'utf8');
 }
 
+function configureBuildInfo() {
+  const buildInfoPath = path.join(DIST, 'js', 'build-info.js');
+  const devMode = process.env.FLORESTEVER_DEV_BUILD === '1';
+  fs.writeFileSync(
+    buildInfoPath,
+    `window.floristEverBuildInfo = Object.freeze(${JSON.stringify({ devMode })});\n`,
+    'utf8'
+  );
+}
+
 function copyDirectory(relativePath) {
   const from = path.join(ROOT, relativePath);
   const to = path.join(DIST, relativePath);
@@ -95,6 +105,11 @@ function configureOfflinePrecache() {
 }
 
 function writeSecurityHeaderFiles() {
+  const cinematicCsp = csp
+    .replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+    .replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")
+    .replace("style-src 'self' 'unsafe-inline'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com")
+    .replace("font-src 'self' data:", "font-src 'self' data: https://fonts.gstatic.com");
   const headers = [
     '/*',
     `  Content-Security-Policy: ${csp}`,
@@ -105,7 +120,13 @@ function writeSecurityHeaderFiles() {
     '  X-Content-Type-Options: nosniff',
     '  X-Frame-Options: DENY',
     '  X-Permitted-Cross-Domain-Policies: none',
-    '  Permissions-Policy: accelerometer=(), ambient-light-sensor=(), autoplay=(self), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), usb=()'
+    '  Permissions-Policy: accelerometer=(), ambient-light-sensor=(), autoplay=(self), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), usb=()',
+    '/cinematic-assets/floristever.html',
+    `  Content-Security-Policy: ${cinematicCsp}`,
+    '  X-Frame-Options: SAMEORIGIN',
+    '/cinematic-assets/subsolo.html',
+    `  Content-Security-Policy: ${cinematicCsp}`,
+    '  X-Frame-Options: SAMEORIGIN'
   ].join('\n');
 
   const htaccess = [
@@ -119,6 +140,10 @@ function writeSecurityHeaderFiles() {
     '  Header always set X-Frame-Options "DENY"',
     '  Header always set X-Permitted-Cross-Domain-Policies "none"',
     '  Header always set Permissions-Policy "accelerometer=(), ambient-light-sensor=(), autoplay=(self), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), usb=()"',
+    '  <FilesMatch "^(floristever|subsolo)\\.html$">',
+    `    Header always set Content-Security-Policy "${cinematicCsp}"`,
+    '    Header always set X-Frame-Options "SAMEORIGIN"',
+    '  </FilesMatch>',
     '</IfModule>'
   ].join('\n');
 
@@ -145,6 +170,7 @@ FILES.forEach((file) => copyFile(file));
 ADDITIONAL_FILES.forEach(({ source, destination }) => copyFile(source, destination));
 configureLoginApi();
 DIRECTORIES.forEach(copyDirectory);
+configureBuildInfo();
 configureOfflinePrecache();
 writeSecurityHeaderFiles();
 

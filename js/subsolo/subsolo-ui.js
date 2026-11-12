@@ -6,12 +6,17 @@
 import { SUBSOLO_VARIETIES, SUBSOLO_PRODUCTS, SUBSOLO_RESPECT_CONFIG, PACKAGING_OPTIONS } from './subsolo-config.js';
 import { formatNumber } from '../utils.js';
 import { ICONS } from '../icons.js';
+import { SubsoloTutorial } from './subsolo-tutorial.js';
 
 export class SubsoloUI {
   constructor(game, subsoloManager) {
     this.game = game;
     this.manager = subsoloManager;
     this.isSubsoloActive = false;
+    this.modalPointerInteraction = false;
+    this.modalPointerHover = false;
+    this.modalPointerFocus = false;
+    this.tutorial = new SubsoloTutorial(subsoloManager, game.hud);
 
     // Elementos da HUD
     this.surfaceHudActions = document.getElementById('hud-menu-items')?.parentElement;
@@ -23,6 +28,7 @@ export class SubsoloUI {
 
     // Pills temáticas
     this.pillRespect = document.getElementById('subsolo-hud-respect');
+    this.pillRespectText = document.getElementById('subsolo-respect-text');
     this.pillEnergy = document.getElementById('subsolo-hud-energy');
     this.pillEnergyText = document.getElementById('subsolo-energy-text');
     this.pillWater = document.getElementById('subsolo-hud-water');
@@ -44,12 +50,16 @@ export class SubsoloUI {
 
   bindEvents() {
     // Botões de Ação da HUD do Subsolo
-    document.getElementById('btn-subsolo-cultivo')?.addEventListener('click', () => this.openCultivoModal());
-    document.getElementById('btn-subsolo-secagem')?.addEventListener('click', () => this.openSecagemModal());
-    document.getElementById('btn-subsolo-prep')?.addEventListener('click', () => this.openPrepModal());
-    document.getElementById('btn-subsolo-logistica')?.addEventListener('click', () => this.openLogisticaModal());
     document.getElementById('btn-subsolo-dynamo')?.addEventListener('click', () => this.handleDynamoCrank());
     document.getElementById('btn-subsolo-subir')?.addEventListener('click', () => this.handleSubir());
+    document.getElementById('btn-subsolo-tutorial')?.addEventListener('click', () => {
+      this.setSubsoloMenuOpen(false);
+      this.closeAllSubsoloModals();
+      this.tutorial.open();
+    });
+    document.getElementById('btn-subsolo-settings')?.addEventListener('click', () => {
+      this.game.openSettings?.();
+    });
     this.subsoloMenuToggle?.addEventListener('click', () => {
       this.setSubsoloMenuOpen(this.subsoloMenuToggle.getAttribute('aria-expanded') !== 'true');
     });
@@ -62,19 +72,17 @@ export class SubsoloUI {
       }
     });
 
-    // Cliques nas pills para atalhos
-    this.pillEnergy?.addEventListener('click', () => this.handleDynamoCrank());
-    this.pillWater?.addEventListener('click', () => this.openCultivoModal());
-    this.pillMala?.addEventListener('click', () => this.openLogisticaModal());
-    this.pillHeat?.addEventListener('click', () => this.openLogisticaModal());
-
     // Fechar modais ao clicar em botões [data-close]
     document.querySelectorAll('.btn-close-subsolo, [data-close-subsolo]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         const modalId = btn.getAttribute('data-close-subsolo') || btn.closest('.modal-backdrop')?.id;
         if (modalId) {
           const m = document.getElementById(modalId);
-          if (m) m.classList.add('hidden');
+          if ([this.modalCultivo, this.modalSecagem, this.modalPrep, this.modalLogistica].includes(m)) {
+            this.closeAllSubsoloModals();
+          } else if (m) {
+            m.classList.add('hidden');
+          }
         }
       });
     });
@@ -82,22 +90,104 @@ export class SubsoloUI {
     // Fechar ao clicar no backdrop
     [this.modalCultivo, this.modalSecagem, this.modalPrep, this.modalLogistica].forEach((modal) => {
       if (!modal) return;
+      // Os modais são atualizados enquanto o jogo simula. Não substitua os
+      // controlos entre pointerdown e click, ou o browser pode cancelar o click.
+      modal.addEventListener('pointerdown', () => {
+        this.modalPointerInteraction = true;
+      });
+      modal.addEventListener('pointerenter', (event) => {
+        if (event.pointerType !== 'touch') this.modalPointerHover = true;
+      });
+      modal.addEventListener('pointerleave', (event) => {
+        if (event.pointerType !== 'touch') this.modalPointerHover = false;
+      });
+      modal.addEventListener('focusin', () => {
+        this.modalPointerFocus = true;
+      });
+      modal.addEventListener('focusout', (event) => {
+        if (!(event.relatedTarget instanceof Node) || !modal.contains(event.relatedTarget)) {
+          this.modalPointerFocus = false;
+        }
+      });
+      modal.addEventListener('click', (event) => this.handleModalAction(event));
       modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.classList.add('hidden');
+        if (e.target === modal) this.closeAllSubsoloModals();
       });
     });
+    const releaseModalPointer = () => {
+      window.setTimeout(() => { this.modalPointerInteraction = false; }, 0);
+    };
+    window.addEventListener('pointerup', releaseModalPointer, true);
+    window.addEventListener('pointercancel', releaseModalPointer, true);
 
     // Fechar modais do subsolo com a tecla Escape
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.isSubsoloActive) {
         this.setSubsoloMenuOpen(false);
-        [this.modalCultivo, this.modalSecagem, this.modalPrep, this.modalLogistica].forEach((m) => {
-          if (m && !m.classList.contains('hidden')) {
-            m.classList.add('hidden');
-          }
-        });
+        this.closeAllSubsoloModals();
       }
     });
+  }
+
+  handleModalAction(event) {
+    const button = event.target instanceof Element
+      ? event.target.closest('[data-subsolo-action]')
+      : null;
+    if (!button || button.disabled) return;
+
+    switch (button.dataset.subsoloAction) {
+      case 'refill-water':
+        this.refillWaterTank();
+        break;
+      case 'buy-fuel':
+        this.buyFuelSupply();
+        break;
+      case 'plant-all-empty':
+        this.plantAllEmptyPlots();
+        break;
+      case 'plant-plot': {
+        const index = Number(button.dataset.plotIndex);
+        if (Number.isInteger(index)) this.plantPlot(index);
+        break;
+      }
+      case 'harvest-all-ready-plots':
+        this.harvestAllReadyPlots();
+        break;
+      case 'harvest-plot': {
+        const index = Number(button.dataset.plotIndex);
+        if (Number.isInteger(index)) this.harvestPlot(index);
+        break;
+      }
+      case 'collect-all-ready-racks':
+        this.collectAllReadyRacks();
+        break;
+      case 'collect-rack': {
+        const index = Number(button.dataset.rackIndex);
+        if (Number.isInteger(index)) this.collectRack(index);
+        break;
+      }
+      case 'collect-preparation':
+        this.collectPrep();
+        break;
+      case 'start-preparation':
+        if (button.dataset.productId) this.startPrep(button.dataset.productId);
+        break;
+      case 'hide-cofre':
+        this.hideCofre();
+        break;
+      case 'transfer-all-to-mala':
+        this.transferAllToMala();
+        break;
+      case 'deposit-all-to-cofre':
+        this.depositAllToCofre();
+        break;
+      case 'transfer-to-mala':
+        if (button.dataset.productId) this.transferToMala(button.dataset.productId);
+        break;
+      case 'deposit-to-cofre':
+        if (button.dataset.productId) this.depositToCofre(button.dataset.productId);
+        break;
+    }
   }
 
   setSubsoloMenuOpen(isOpen) {
@@ -151,6 +241,7 @@ export class SubsoloUI {
       }
 
       this.updateHud();
+      this.tutorial.openIfNeeded();
     } else {
       // Restaura sistemas da superfície
       if (this.surfaceHudActions) this.surfaceHudActions.classList.remove('subsolo-hidden');
@@ -172,6 +263,8 @@ export class SubsoloUI {
     [this.modalCultivo, this.modalSecagem, this.modalPrep, this.modalLogistica].forEach((m) => {
       m?.classList.add('hidden');
     });
+    this.modalPointerHover = false;
+    this.modalPointerFocus = false;
   }
 
   update(dt) {
@@ -179,6 +272,7 @@ export class SubsoloUI {
     this.updateHud();
 
     // Se algum modal estiver aberto, atualiza em tempo real
+    if (this.modalPointerInteraction || this.modalPointerHover || this.modalPointerFocus) return;
     if (this.modalCultivo && !this.modalCultivo.classList.contains('hidden')) {
       this.renderCultivoModalContent();
     }
@@ -201,7 +295,7 @@ export class SubsoloUI {
     if (this.pillRespect) {
       const curLvl = data.respeito.nivel;
       const lvlConfig = SUBSOLO_RESPECT_CONFIG.find((c) => c.level === curLvl) || { title: 'Recruta' };
-      this.pillRespect.textContent = `★ S${curLvl}`;
+      if (this.pillRespectText) this.pillRespectText.textContent = `S${curLvl}`;
       this.pillRespect.title = `Nível de Respeito: S${curLvl} (${lvlConfig.title}) - ${data.respeito.xp} XP`;
     }
 
@@ -229,15 +323,15 @@ export class SubsoloUI {
     // Calor
     if (this.pillHeat && this.pillHeatText) {
       if (data.conteudoSecreto.modoTranquilo) {
-        this.pillHeatText.textContent = '🕊️';
+        this.pillHeatText.textContent = 'Seguro';
         this.pillHeat.title = 'Modo Tranquilo ativo: sem calor nem fiscalização';
         this.pillHeat.classList.remove('critical-resource', 'warning-resource');
       } else {
         const calor = Math.round(data.calor.valor);
         if (data.calor.fiscalPresente) {
-          this.pillHeatText.textContent = `🚨 FISCAL (${Math.ceil(data.calor.fiscalJanelaRestante)}s)`;
+          this.pillHeatText.textContent = `FISCAL (${Math.ceil(data.calor.fiscalJanelaRestante)}s)`;
           this.pillHeat.classList.add('critical-resource');
-          this.pillHeat.title = 'ATENÇÃO: Fiscalização em curso! Abre a Logística e Oculta o Cofre!';
+          this.pillHeat.title = 'ATENÇÃO: Fiscalização em curso! Vai à estação de Logística e oculta o Cofre!';
         } else {
           this.pillHeatText.textContent = `${calor}%`;
           this.pillHeat.classList.toggle('critical-resource', calor >= 80);
@@ -259,53 +353,6 @@ export class SubsoloUI {
       if (meterBar) meterBar.style.width = `${malaPct}%`;
     }
 
-    // Notificações em Tempo Real nos Botões da HUD
-    this.updateHudBadges();
-  }
-
-  updateHudBadges() {
-    const data = this.manager.data;
-    if (!data) return;
-
-    // Badges de itens prontos
-    const readyPlots = data.canteiros.filter((p) => p.status === 'ready').length;
-    const readyRacks = data.estendais.filter((r) => r.status === 'ready').length;
-    const isPrepReady = data.preparacao.status === 'ready';
-
-    this.setButtonBadge('btn-subsolo-cultivo', readyPlots);
-    this.setButtonBadge('btn-subsolo-secagem', readyRacks);
-    this.setButtonBadge('btn-subsolo-prep', isPrepReady ? '!' : 0);
-  }
-
-  setButtonBadge(buttonId, count) {
-    const btn = document.getElementById(buttonId);
-    if (!btn) return;
-    let badge = btn.querySelector('.hud-notify-badge');
-    if (!badge) {
-      badge = document.createElement('span');
-      badge.className = 'hud-notify-badge';
-      btn.appendChild(badge);
-    }
-    if (count && count !== 0) {
-      badge.textContent = count;
-      badge.classList.remove('hidden');
-    } else {
-      badge.classList.add('hidden');
-    }
-  }
-
-  handleDynamoCrank() {
-    const gained = this.manager.crankManualDynamo();
-    if (gained) {
-      this.game.hud?.showToast(`+${gained}% Energia gerada no dínamo manual!`, 'check');
-      this.updateHud();
-      if (this.game.soundManager) {
-        this.game.soundManager.playTone(480, { duration: 0.12, type: 'triangle', volume: 0.2 });
-      }
-      if (this.modalCultivo && !this.modalCultivo.classList.contains('hidden')) {
-        this.renderCultivoModalContent();
-      }
-    }
   }
 
   handleSubir() {
@@ -377,11 +424,11 @@ export class SubsoloUI {
     batchBar.innerHTML = `
       <div class="batch-bar-left">
         <span class="batch-badge">Estufa: <strong>${data.canteiros.length} Canteiros</strong></span>
-        ${readyCount > 0 ? `<button type="button" class="btn-success btn-sm btn-bounce btn-batch-action" onclick="window.__floristSubsoloUI.harvestAllReadyPlots()">${ICONS.subsoloHarvest} Colher Todos (${readyCount})</button>` : ''}
+        ${readyCount > 0 ? `<button type="button" class="btn-success btn-sm btn-bounce btn-batch-action" data-subsolo-action="harvest-all-ready-plots">${ICONS.subsoloHarvest} Colher Todos (${readyCount})</button>` : ''}
       </div>
       <div class="batch-bar-right">
         ${emptyCount > 0 ? `
-          <button type="button" class="btn-primary btn-sm btn-subsolo-action" onclick="window.__floristSubsoloUI.plantAllEmptyPlots()">${ICONS.sprout} Semear Todos Vazios (${emptyCount})</button>
+          <button type="button" class="btn-primary btn-sm btn-subsolo-action" data-subsolo-action="plant-all-empty">${ICONS.sprout} Semear Todos Vazios (${emptyCount})</button>
         ` : ''}
       </div>
     `;
@@ -400,10 +447,10 @@ export class SubsoloUI {
               <select id="select-seed-${i}" class="subsolo-select" aria-label="Escolher semente">
                 ${Object.entries(SUBSOLO_VARIETIES).map(([id, v]) => {
                   const unlocked = data.respeito.nivel >= v.requiredRespect;
-                  return `<option value="${id}" ${unlocked ? '' : 'disabled'}>${v.name} (${formatNumber(v.seedCost)}🪙 • S${v.requiredRespect}+)</option>`;
+                  return `<option value="${id}" ${unlocked ? '' : 'disabled'}>${v.name} (${formatNumber(v.seedCost)} moedas • S${v.requiredRespect}+)</option>`;
                 }).join('')}
               </select>
-              <button type="button" class="btn-primary btn-sm btn-subsolo-action" onclick="window.__floristSubsoloUI.plantPlot(${i})">${ICONS.sprout} Semear</button>
+              <button type="button" class="btn-primary btn-sm btn-subsolo-action" data-subsolo-action="plant-plot" data-plot-index="${i}">${ICONS.sprout} Semear</button>
             </div>
           </div>
         `;
@@ -417,7 +464,7 @@ export class SubsoloUI {
         return `
           <div class="subsolo-card-slot growing-slot">
             <div class="slot-header">
-              <span class="slot-title">${variety.icon || ''} ${variety.name}</span>
+              <span class="slot-title">${ICONS[variety.icon] || ICONS.subsoloCultivo} ${variety.name}</span>
               <span class="slot-tag tag-growing">${pct}%</span>
             </div>
             <div class="slot-stage-badge">
@@ -437,7 +484,7 @@ export class SubsoloUI {
         return `
           <div class="subsolo-card-slot ready-slot">
             <div class="slot-header">
-              <span class="slot-title">${variety.icon || ''} ${variety.name}</span>
+              <span class="slot-title">${ICONS[variety.icon] || ICONS.subsoloCultivo} ${variety.name}</span>
               <span class="slot-tag tag-ready">Maduro!</span>
             </div>
             <div class="ready-yield-display">
@@ -447,7 +494,7 @@ export class SubsoloUI {
                 <p class="slot-desc">Rendimento: <strong>+${variety.yieldLeaves} folhas frescas</strong></p>
               </div>
             </div>
-            <button type="button" class="btn-success btn-sm btn-bounce btn-subsolo-action" onclick="window.__floristSubsoloUI.harvestPlot(${i})">${ICONS.subsoloHarvest} Colher Flores</button>
+            <button type="button" class="btn-success btn-sm btn-bounce btn-subsolo-action" data-subsolo-action="harvest-plot" data-plot-index="${i}">${ICONS.subsoloHarvest} Colher Flores</button>
           </div>
         `;
       }
@@ -558,7 +605,7 @@ export class SubsoloUI {
         <span class="batch-badge">Ventilação Térmica: <strong>Ativa</strong></span>
       </div>
       <div class="batch-bar-right">
-        ${readyCount > 0 ? `<button type="button" class="btn-success btn-sm btn-bounce btn-batch-action" onclick="window.__floristSubsoloUI.collectAllReadyRacks()">${ICONS.subsoloHarvest} Recolher Todas Folhas (${readyCount})</button>` : ''}
+        ${readyCount > 0 ? `<button type="button" class="btn-success btn-sm btn-bounce btn-batch-action" data-subsolo-action="collect-all-ready-racks">${ICONS.subsoloHarvest} Recolher Todas Folhas (${readyCount})</button>` : ''}
       </div>
     `;
 
@@ -572,7 +619,7 @@ export class SubsoloUI {
             </div>
             <p class="slot-desc">Estrutura de madeira suspensa pronta para receber colheitas frescas.</p>
             <div class="empty-rack-indicator">
-              <span>🌾 Colhe flores na Estufa para secar aqui</span>
+              <span>${ICONS.subsoloHarvest} Colhe flores na Estufa para secar aqui</span>
             </div>
           </div>
         `;
@@ -588,7 +635,7 @@ export class SubsoloUI {
         return `
           <div class="subsolo-card-slot growing-slot">
             <div class="slot-header">
-              <span class="slot-title">${variety.icon || ''} ${variety.name} (${rack.leaves} un.)</span>
+              <span class="slot-title">${ICONS[variety.icon] || ICONS.subsoloCultivo} ${variety.name} (${rack.leaves} un.)</span>
               <span class="slot-tag tag-growing">${pct}%</span>
             </div>
             <div class="slot-stage-badge stage-amber">
@@ -611,7 +658,7 @@ export class SubsoloUI {
               <span class="slot-tag tag-ready">Curado!</span>
             </div>
             <p class="slot-desc">Processo de secagem concluído. Textura suave e óleo essencial preservado.</p>
-            <button type="button" class="btn-success btn-sm btn-bounce btn-subsolo-action" onclick="window.__floristSubsoloUI.collectRack(${i})">${ICONS.subsoloHarvest} Guardar no Armazém</button>
+            <button type="button" class="btn-success btn-sm btn-bounce btn-subsolo-action" data-subsolo-action="collect-rack" data-rack-index="${i}">${ICONS.subsoloHarvest} Guardar no Armazém</button>
           </div>
         `;
       }
@@ -689,7 +736,7 @@ export class SubsoloUI {
           <div class="bench-header">
             <div class="bench-icon-badge bench-spinning">${ICONS.subsoloPrep}</div>
             <div class="bench-header-text">
-              <strong>A Manufaturar: ${prod.icon || ''} ${prod.name}</strong>
+              <strong>A Manufaturar: ${ICONS[prod.icon] || ICONS.subsoloMala} ${prod.name}</strong>
               <span class="slot-tag tag-growing">${pct}% Concluído</span>
             </div>
           </div>
@@ -705,11 +752,11 @@ export class SubsoloUI {
           <div class="bench-header">
             <div class="bench-icon-badge bench-ready-icon">${ICONS.check}</div>
             <div class="bench-header-text">
-              <strong>${prod.icon || ''} ${prod.name} Pronto!</strong>
+              <strong>${ICONS[prod.icon] || ICONS.subsoloMala} ${prod.name} Pronto!</strong>
               <p class="bench-subtitle">Lote finalizado com padrão impecável. Pronto para armazenamento.</p>
             </div>
           </div>
-          <button type="button" class="btn-success btn-sm btn-bounce btn-subsolo-action" onclick="window.__floristSubsoloUI.collectPrep()">${ICONS.subsoloPrep} Guardar no Armazém</button>
+          <button type="button" class="btn-success btn-sm btn-bounce btn-subsolo-action" data-subsolo-action="collect-preparation">${ICONS.subsoloPrep} Guardar no Armazém</button>
         </div>
       `;
     }
@@ -728,17 +775,17 @@ export class SubsoloUI {
       return `
         <div class="subsolo-card-slot prep-card-slot ${canMake ? '' : 'disabled-slot'}">
           <div class="slot-header">
-            <span class="slot-title">${prod.icon || ''} ${prod.name}</span>
-            <span class="slot-tag tag-value">~${formatNumber(prod.baseValue)}🪙</span>
+            <span class="slot-title">${ICONS[prod.icon] || ICONS.subsoloMala} ${prod.name}</span>
+            <span class="slot-tag tag-value">~${formatNumber(prod.baseValue)} ${ICONS.coin}</span>
           </div>
-          <p class="slot-desc">${prod.desc}</p>
+          <p class="slot-desc">${prod.description}</p>
           <div class="prep-specs-row">
             <span class="spec-pill ${canLeaves ? 'spec-ok' : 'spec-missing'}">${ICONS.subsoloHarvest} ${prod.requiredLeaves} folhas</span>
-            <span class="spec-pill">⏱️ ${Math.round(prod.prepTimeSeconds / 60)} min</span>
-            <span class="spec-pill ${canRespect ? 'spec-unlocked' : 'spec-locked'}">★ S${prod.requiredRespect}+</span>
+            <span class="spec-pill">${ICONS.subsoloClock} ${Math.round(prod.prepTimeSeconds / 60)} min</span>
+            <span class="spec-pill ${canRespect ? 'spec-unlocked' : 'spec-locked'}">${ICONS.subsoloRespect} S${prod.requiredRespect}+</span>
           </div>
           ${!canMake && reason ? `<div class="prep-hint-alert">${reason}</div>` : ''}
-          <button type="button" class="btn-primary btn-sm btn-subsolo-action" ${canMake ? '' : 'disabled'} onclick="window.__floristSubsoloUI.startPrep('${id}')">${ICONS.subsoloPrep} Preparar Lote</button>
+          <button type="button" class="btn-primary btn-sm btn-subsolo-action" ${canMake ? '' : 'disabled'} data-subsolo-action="start-preparation" data-product-id="${id}">${ICONS.subsoloPrep} Preparar Lote</button>
         </div>
       `;
     }).join('');
@@ -796,7 +843,7 @@ export class SubsoloUI {
             <p>Oculta o cofre antes que o fiscal termine a vistoria (${Math.ceil(data.calor.fiscalJanelaRestante)}s restantes)!</p>
           </div>
         </div>
-        <button type="button" class="btn-danger btn-bounce btn-subsolo-alert" onclick="window.__floristSubsoloUI.hideCofre()">${ICONS.subsoloShield} Ocultar Cofre da Fiscalização</button>
+        <button type="button" class="btn-danger btn-bounce btn-subsolo-alert" data-subsolo-action="hide-cofre">${ICONS.subsoloShield} Ocultar Cofre da Fiscalização</button>
       </div>
     ` : '';
 
@@ -809,17 +856,17 @@ export class SubsoloUI {
           <span class="flow-dot amber"></span>
           <span>Armazém do Túnel</span>
         </div>
-        <span class="flow-arrow">➔</span>
+        <span class="flow-arrow">${ICONS.subsoloArrow}</span>
         <div class="flow-step">
           <span class="flow-dot cyan"></span>
           <span>Mala de Transporte</span>
         </div>
-        <span class="flow-arrow">➔</span>
+        <span class="flow-arrow">${ICONS.subsoloArrow}</span>
         <div class="flow-step">
           <span class="flow-dot purple"></span>
           <span>Cofre Secreto</span>
         </div>
-        <span class="flow-arrow">➔</span>
+        <span class="flow-arrow">${ICONS.subsoloArrow}</span>
         <div class="flow-step">
           <span class="flow-dot green"></span>
           <span>Clientes em Código</span>
@@ -828,8 +875,8 @@ export class SubsoloUI {
 
       <!-- Barra de Ações Rápidas de Logística -->
       <div class="subsolo-logistics-quick-actions">
-        ${malaTotal < malaCap ? `<button type="button" class="btn-secondary btn-sm" onclick="window.__floristSubsoloUI.transferAllToMala()">${ICONS.subsoloMala} Encher Mala a partir do Armazém</button>` : ''}
-        ${malaTotal > 0 && cofreTotal < cofreCap ? `<button type="button" class="btn-primary btn-sm btn-bounce" onclick="window.__floristSubsoloUI.depositAllToCofre()">${ICONS.subsoloLogistica} Guardar Toda a Mala no Cofre</button>` : ''}
+        ${malaTotal < malaCap ? `<button type="button" class="btn-secondary btn-sm" data-subsolo-action="transfer-all-to-mala">${ICONS.subsoloMala} Encher Mala a partir do Armazém</button>` : ''}
+        ${malaTotal > 0 && cofreTotal < cofreCap ? `<button type="button" class="btn-primary btn-sm btn-bounce" data-subsolo-action="deposit-all-to-cofre">${ICONS.subsoloLogistica} Guardar Toda a Mala no Cofre</button>` : ''}
       </div>
 
       <div class="subsolo-logistics-grid">
@@ -845,21 +892,21 @@ export class SubsoloUI {
             <span class="stock-name">Ramos Discretos:</span>
             <div class="stock-ctrl">
               <strong class="stock-number">${data.armazemOculto.ramo || 0}</strong>
-              ${data.armazemOculto.ramo > 0 && malaTotal < malaCap ? `<button type="button" class="btn-xs btn-transfer" title="Mover 1 para a mala" onclick="window.__floristSubsoloUI.transferToMala('ramo')">+1 Mala</button>` : ''}
+              ${data.armazemOculto.ramo > 0 && malaTotal < malaCap ? `<button type="button" class="btn-xs btn-transfer" title="Mover 1 para a mala" data-subsolo-action="transfer-to-mala" data-product-id="ramo">+1 Mala</button>` : ''}
             </div>
           </div>
           <div class="stock-item">
             <span class="stock-name">Maços Prensados:</span>
             <div class="stock-ctrl">
               <strong class="stock-number">${data.armazemOculto.maco || 0}</strong>
-              ${data.armazemOculto.maco > 0 && malaTotal < malaCap ? `<button type="button" class="btn-xs btn-transfer" title="Mover 1 para a mala" onclick="window.__floristSubsoloUI.transferToMala('maco')">+1 Mala</button>` : ''}
+              ${data.armazemOculto.maco > 0 && malaTotal < malaCap ? `<button type="button" class="btn-xs btn-transfer" title="Mover 1 para a mala" data-subsolo-action="transfer-to-mala" data-product-id="maco">+1 Mala</button>` : ''}
             </div>
           </div>
           <div class="stock-item">
             <span class="stock-name">Reserva Especial:</span>
             <div class="stock-ctrl">
               <strong class="stock-number">${data.armazemOculto.reserva || 0}</strong>
-              ${data.armazemOculto.reserva > 0 && malaTotal < malaCap ? `<button type="button" class="btn-xs btn-transfer" title="Mover 1 para a mala" onclick="window.__floristSubsoloUI.transferToMala('reserva')">+1 Mala</button>` : ''}
+              ${data.armazemOculto.reserva > 0 && malaTotal < malaCap ? `<button type="button" class="btn-xs btn-transfer" title="Mover 1 para a mala" data-subsolo-action="transfer-to-mala" data-product-id="reserva">+1 Mala</button>` : ''}
             </div>
           </div>
         </div>
@@ -877,21 +924,21 @@ export class SubsoloUI {
             <span class="stock-name">Ramos na Mala:</span>
             <div class="stock-ctrl">
               <strong class="stock-number">${data.mala.ramo || 0}</strong>
-              ${data.mala.ramo > 0 && cofreTotal < cofreCap ? `<button type="button" class="btn-xs btn-transfer" title="Mover 1 para o cofre" onclick="window.__floristSubsoloUI.depositToCofre('ramo')">+1 Cofre</button>` : ''}
+              ${data.mala.ramo > 0 && cofreTotal < cofreCap ? `<button type="button" class="btn-xs btn-transfer" title="Mover 1 para o cofre" data-subsolo-action="deposit-to-cofre" data-product-id="ramo">+1 Cofre</button>` : ''}
             </div>
           </div>
           <div class="stock-item">
             <span class="stock-name">Maços na Mala:</span>
             <div class="stock-ctrl">
               <strong class="stock-number">${data.mala.maco || 0}</strong>
-              ${data.mala.maco > 0 && cofreTotal < cofreCap ? `<button type="button" class="btn-xs btn-transfer" title="Mover 1 para o cofre" onclick="window.__floristSubsoloUI.depositToCofre('maco')">+1 Cofre</button>` : ''}
+              ${data.mala.maco > 0 && cofreTotal < cofreCap ? `<button type="button" class="btn-xs btn-transfer" title="Mover 1 para o cofre" data-subsolo-action="deposit-to-cofre" data-product-id="maco">+1 Cofre</button>` : ''}
             </div>
           </div>
           <div class="stock-item">
             <span class="stock-name">Reservas na Mala:</span>
             <div class="stock-ctrl">
               <strong class="stock-number">${data.mala.reserva || 0}</strong>
-              ${data.mala.reserva > 0 && cofreTotal < cofreCap ? `<button type="button" class="btn-xs btn-transfer" title="Mover 1 para o cofre" onclick="window.__floristSubsoloUI.depositToCofre('reserva')">+1 Cofre</button>` : ''}
+              ${data.mala.reserva > 0 && cofreTotal < cofreCap ? `<button type="button" class="btn-xs btn-transfer" title="Mover 1 para o cofre" data-subsolo-action="deposit-to-cofre" data-product-id="reserva">+1 Cofre</button>` : ''}
             </div>
           </div>
         </div>
@@ -994,6 +1041,8 @@ export class SubsoloUI {
       if (this.modalCultivo && !this.modalCultivo.classList.contains('hidden')) {
         this.renderCultivoModalContent();
       }
+    } else {
+      this.game.hud?.showToast('A energia já está no máximo.', 'check');
     }
   }
 

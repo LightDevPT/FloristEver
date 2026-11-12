@@ -222,7 +222,11 @@ export class GameState {
       themeReducedEffects: false,
       mobileControlLayout: 'left',
       mobileMoveControlSize: 'standard',
-      mobileActionControlSize: 'standard'
+      mobileActionControlSize: 'standard',
+      cinematicSeen: {
+        floristever: false,
+        subsolo: false
+      }
     };
 
     // Flores desbloqueadas para compra de parcelas
@@ -1482,6 +1486,10 @@ export class GameState {
           : null;
       }
       this.settings = { ...this.settings, ...(data.settings || {}) };
+      this.settings.cinematicSeen = {
+        floristever: data.settings?.cinematicSeen?.floristever === true,
+        subsolo: data.settings?.cinematicSeen?.subsolo === true
+      };
       this.unlockedFlowers = { ...this.unlockedFlowers, ...(data.unlockedFlowers || {}) };
       if (Array.isArray(data.discoveredBouquets)) {
         this.discoveredBouquets = data.discoveredBouquets
@@ -1719,6 +1727,9 @@ export class GameState {
         this.subsolo.caderno = {
           ...createDefaultSubsoloState().caderno,
           ...(data.subsolo.caderno || {})
+        };
+        this.subsolo.tutorial = {
+          completed: data.subsolo.tutorial?.completed === true
         };
         this.subsolo.melhorias = {
           ...createDefaultSubsoloState().melhorias,

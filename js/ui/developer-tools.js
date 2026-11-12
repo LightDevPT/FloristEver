@@ -105,8 +105,16 @@ export class DeveloperToolsPanel {
     if (typeof window !== 'undefined') {
       const hostname = window.location?.hostname;
       const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+      const protocol = window.location?.protocol;
+      const isNativeApp = Boolean(window.Capacitor?.isNativePlatform?.() || protocol === 'capacitor:');
+      const isElectronApp = protocol === 'file:';
+      const isDevBuild = window.floristEverBuildInfo?.devMode === true;
       const hasDevFlag = window.location?.search?.includes('dev') || isLocalFullTestMode(window.location);
-      if (isLocalHost || hasDevFlag) return true;
+      if (isNativeApp || isElectronApp) {
+        if (isDevBuild) return true;
+      } else if (isLocalHost || hasDevFlag || isDevBuild) {
+        return true;
+      }
     }
     const user = this.getUser?.();
     return Array.isArray(user?.roles) && user.roles.includes('developer');
@@ -347,8 +355,12 @@ export class DeveloperToolsPanel {
     const game = this.game || (typeof window !== 'undefined' ? window.floristGame : null);
     if (game?.sceneManager) {
       if (typeof document !== 'undefined') document.getElementById('modal-settings')?.classList.add('hidden');
-      game.sceneManager.startDescer();
-      this.hud?.showToast?.('A descer para o Subsolo...', 'sprout');
+      const started = game.sceneManager.startDescer();
+      if (game.cinematicManager?.isPlaying) {
+        this.hud?.showToast?.('A apresentação do Subsolo está a ser reproduzida.', 'info');
+      } else if (started) {
+        this.hud?.showToast?.('A descer para o Subsolo...', 'sprout');
+      }
     }
   }
 

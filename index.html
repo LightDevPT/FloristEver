@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>FloristEver - Jardim e Floricultura Acolhedora</title>
   <meta name="description" content="FloristEver: Um jogo acolhedor de cultivo de flores, gestão de loja e criação de ramos artesanais.">
-  <meta name="theme-color" content="#A8D5A2">
+  <meta name="theme-color" content="#1B1F20">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="light-login-api-base" content="https://floristever.netlify.app/api/v1">
   <meta
     http-equiv="Content-Security-Policy"
@@ -113,10 +116,6 @@
         <button id="btn-open-settings" class="btn-hud btn-bounce" title="Definições do Jogo" aria-label="Configurações do jogo">
           <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19.4 13a7.8 7.8 0 0 0 0-2l2-1.5-2-3.5-2.4 1a7.8 7.8 0 0 0-1.7-1L15 3h-4l-.4 2.9a7.8 7.8 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7.8 7.8 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7.8 7.8 0 0 0 1.7 1L11 21h4l.4-2.9a7.8 7.8 0 0 0 1.7-1l2.4 1 2-3.5-2.1-1.6Z" fill="#F7C948" stroke="#2F5D4A" stroke-width="1.7" stroke-linejoin="round"/><circle cx="13" cy="12" r="3" fill="#FFF6E5" stroke="#2F5D4A" stroke-width="1.7"/></svg></span>
         </button>
-        <button id="btn-open-dev-tools" class="btn-hud btn-bounce hidden" type="button" title="Ferramentas de Desenvolvimento e Subsolo" aria-label="Ferramentas de desenvolvimento">
-          <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.9 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" fill="#B56BFF" stroke="#2F5D4A" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
-          <span class="btn-label">Dev</span>
-        </button>
         </div>
       </div>
       <div id="hud-world-status" class="world-status" aria-live="polite" aria-label="Estado do jardim">
@@ -159,7 +158,7 @@
             <span class="subsolo-icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#C084FC" stroke="#A855F7" stroke-width="1.5"/></svg></span>
             <span id="subsolo-respect-text">S1</span>
           </div>
-          <div class="hud-pill subsolo-pill subsolo-energy-pill" id="subsolo-hud-energy" title="Energia elétrica (Clica para rodar o dínamo)">
+          <div class="hud-pill subsolo-pill subsolo-energy-pill" id="subsolo-hud-energy" title="Energia elétrica">
             <span class="subsolo-icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 2L4 13H12L10 22L20 10H12L14 2H13Z" fill="#EAB308" stroke="#CA8A04" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
             <span id="subsolo-energy-text" class="hud-value">100%</span>
             <span class="subsolo-pill-meter"><span class="meter-bar" id="meter-energy-bar" style="width: 100%;"></span></span>
@@ -198,34 +197,33 @@
             <span class="hud-menu-toggle-label">Menu</span>
           </button>
           <div id="subsolo-hud-menu-items" class="subsolo-hud-menu-items">
-          <button id="btn-subsolo-cultivo" class="btn-hud btn-bounce subsolo-btn" type="button" title="Estufa e Canteiros UV" aria-label="Cultivo Subterrâneo">
-            <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22V13" stroke="#10B981" stroke-width="2.2" stroke-linecap="round"/><path d="M12 13C12 8.5 16.5 7 20 7C20 11 17 15 12 15" fill="#34D399" stroke="#059669" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 16C12 13 8.5 11.5 5 12C5 15.5 8 17.5 12 17.5" fill="#10B981" stroke="#047857" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 3L10.5 5.5M15 3L13.5 5.5M12 2V5" stroke="#C084FC" stroke-width="1.6" stroke-linecap="round"/></svg></span>
-            <span class="btn-label">Cultivo</span>
-          </button>
-          <button id="btn-subsolo-secagem" class="btn-hud btn-bounce subsolo-btn" type="button" title="Estendais de Secagem" aria-label="Secagem de Folhas">
-            <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6H21" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round"/><path d="M6 6V11C6 13 8 15 8 17C8 15 10 13 10 11V6" stroke="#D97706" stroke-width="1.6" fill="#FDE68A"/><path d="M14 6V10C14 12 16 14 16 16C16 14 18 12 18 10V6" stroke="#D97706" stroke-width="1.6" fill="#FDE68A"/><circle cx="6" cy="6" r="1.5" fill="#F59E0B"/><circle cx="14" cy="6" r="1.5" fill="#F59E0B"/></svg></span>
-            <span class="btn-label">Secagem</span>
-          </button>
-          <button id="btn-subsolo-prep" class="btn-hud btn-bounce subsolo-btn" type="button" title="Bancada de Preparação" aria-label="Bancada de Corte">
-            <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="10" width="18" height="10" rx="2" fill="#0F172A" stroke="#38BDF8" stroke-width="2"/><path d="M3 14H21" stroke="#38BDF8" stroke-width="1.5"/><path d="M7 6L11 10M17 6L13 10" stroke="#7DD3FC" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="14" r="2" fill="#38BDF8"/></svg></span>
-            <span class="btn-label">Bancada</span>
-          </button>
-          <button id="btn-subsolo-logistica" class="btn-hud btn-bounce subsolo-btn" type="button" title="Logística: Mala e Cofre" aria-label="Logística e Cofre">
-            <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="8" width="16" height="12" rx="2.5" fill="#1E1B4B" stroke="#A855F7" stroke-width="2"/><path d="M8 8V5.5C8 4.7 8.7 4 9.5 4H14.5C15.3 4 16 4.7 16 5.5V8" stroke="#A855F7" stroke-width="2" stroke-linecap="round"/><path d="M4 13H20" stroke="#A855F7" stroke-width="1.5"/><circle cx="12" cy="13" r="2" fill="#F59E0B"/></svg></span>
-            <span class="btn-label">Logística</span>
-          </button>
-          <button id="btn-subsolo-dynamo" class="btn-hud btn-bounce subsolo-btn" type="button" title="Rodar Dínamo (+15% Energia)" aria-label="Dínamo Manual">
+          <button id="btn-subsolo-dynamo" class="btn-hud btn-bounce subsolo-btn subsolo-btn-dynamo subsolo-btn-icon-only" type="button" title="Rodar Dínamo (+15% Energia)" aria-label="Dínamo Manual">
             <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="8" fill="#1C1917" stroke="#EAB308" stroke-width="2"/><path d="M13 7L9 13H14L11 18" stroke="#FDE047" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-            <span class="btn-label">Dínamo</span>
+            <span class="btn-label subsolo-btn-compact-label">Dínamo</span>
           </button>
-          <button id="btn-subsolo-subir" class="btn-hud btn-bounce subsolo-btn btn-subsolo-exit" type="button" title="Subir para a Floricultura" aria-label="Subir para a Floricultura">
+          <button id="btn-subsolo-subir" class="btn-hud btn-bounce subsolo-btn btn-subsolo-exit subsolo-btn-icon-only" type="button" title="Subir para a Floricultura" aria-label="Subir para a Floricultura">
             <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 3V21M17 3V21" stroke="#22C55E" stroke-width="2.4" stroke-linecap="round"/><path d="M7 6H17M7 10H17M7 14H17M7 18H17" stroke="#86EFAC" stroke-width="2" stroke-linecap="round"/><path d="M12 2L9.5 4.5M12 2L14.5 4.5" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-            <span class="btn-label">Subir</span>
+            <span class="btn-label subsolo-btn-compact-label">Subir</span>
+          </button>
+          <button id="btn-subsolo-tutorial" class="btn-hud subsolo-btn subsolo-btn-tutorial subsolo-btn-icon-only" type="button" title="Abrir tutorial do Subsolo" aria-label="Tutorial do Subsolo">
+            <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M9.8 9A2.3 2.3 0 0 1 12 7.5C13.3 7.5 14.2 8.3 14.2 9.5C14.2 11.2 12 11.5 12 13.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.5" r="1" fill="currentColor"/></svg></span>
+            <span class="btn-label subsolo-btn-compact-label">Tutorial</span>
+          </button>
+          <button id="btn-subsolo-settings" class="btn-hud btn-bounce subsolo-btn subsolo-btn-settings subsolo-btn-icon-only" type="button" title="Abrir definições" aria-label="Configurações do jogo">
+            <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19.4 13a7.8 7.8 0 0 0 0-2l2-1.5-2-3.5-2.4 1a7.8 7.8 0 0 0-1.7-1L15 3h-4l-.4 2.9a7.8 7.8 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7.8 7.8 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7.8 7.8 0 0 0 1.7 1L11 21h4l.4-2.9a7.8 7.8 0 0 0 1.7-1l2.4 1 2-3.5-2.1-1.6Z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="13" cy="12" r="3" fill="#1A1D24" stroke="currentColor" stroke-width="1.7"/></svg></span>
+            <span class="btn-label subsolo-btn-compact-label">Definições</span>
           </button>
           </div>
         </div>
       </div>
     </header>
+
+    <div id="dev-tools-launcher" class="dev-tools-launcher">
+      <button id="btn-open-dev-tools" class="btn-hud btn-bounce hidden" type="button" title="Ferramentas de Desenvolvimento e Subsolo" aria-label="Ferramentas de desenvolvimento">
+        <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.9 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" fill="#B56BFF" stroke="#2F5D4A" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+        <span class="btn-label">DEV</span>
+      </button>
+    </div>
 
     <aside id="map-panel" class="map-panel hidden" aria-label="Mapa do jardim">
       <div class="map-panel-header">
@@ -725,9 +723,11 @@
                 <div id="native-display-setting" class="settings-card setting-item hidden"><label for="native-display-mode">Modo de ecrã</label><select id="native-display-mode" class="native-display-select"><option value="fullscreen">Tela Cheia</option><option value="borderless">Janela Cheia</option><option value="windowed">Janela</option></select><p class="setting-help">Escolhe como a aplicação ocupa o ecrã.</p></div>
                 <section id="developer-tools-panel" class="developer-tools-panel hidden" aria-labelledby="developer-tools-title"></section>
                 <section class="settings-card setting-item"><h4>Aprender a jogar</h4><p class="setting-help">Revê os controlos, as vendas, os menus e a progressão.</p><button type="button" id="btn-replay-tutorial" class="btn-secondary">Ver novamente</button></section>
-                <div class="settings-card info-block"><p><strong>FloristEver</strong> v2.0.0</p><p class="sub-credit">Obrigado por jogares FloristEver <svg class="ui-icon inline-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="12" cy="12" r="3.5" fill="#F7C948" stroke="#2F5D4A" stroke-width="1.5"/><circle cx="12" cy="5.5" r="3" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.2"/><circle cx="12" cy="18.5" r="3" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.2"/><circle cx="5.5" cy="12" r="3" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.2"/><circle cx="18.5" cy="12" r="3" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.2"/></svg></p><p class="powered-credit">Powered By Light Group</p></div>
+                <section class="settings-card setting-item"><h4>Apresentação FloristEver</h4><p class="setting-help">Revê o cinemático de entrada do jogo. A apresentação tem de ser vista até ao fim.</p><button type="button" id="btn-replay-floristever-cinematic" class="btn-secondary">Ver novamente</button></section>
+                <section class="settings-card setting-item"><h4>Apresentação do Subsolo</h4><p class="setting-help">Revê o cinemático do modo Subsolo. A apresentação tem de ser vista até ao fim.</p><button type="button" id="btn-replay-subsolo-cinematic" class="btn-secondary">Ver novamente</button></section>
+                <div class="settings-card info-block"><p><strong>FloristEver</strong> v2.5.0</p><p class="sub-credit">Obrigado por jogares FloristEver <svg class="ui-icon inline-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="12" cy="12" r="3.5" fill="#F7C948" stroke="#2F5D4A" stroke-width="1.5"/><circle cx="12" cy="5.5" r="3" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.2"/><circle cx="12" cy="18.5" r="3" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.2"/><circle cx="5.5" cy="12" r="3" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.2"/><circle cx="18.5" cy="12" r="3" fill="#F4A6B8" stroke="#2F5D4A" stroke-width="1.2"/></svg></p><p class="powered-credit">Powered By Light Group</p></div>
                 <section id="subsolo-settings-section" class="settings-card setting-item hidden" aria-labelledby="subsolo-settings-title">
-                  <h4 id="subsolo-settings-title">🌿 Conteúdo Secreto (Subsolo)</h4>
+                  <h4 id="subsolo-settings-title">Conteúdo Secreto (Subsolo)</h4>
                   <p class="setting-help">Conteúdo temático opcional e fictício disponível a partir do nível 33.</p>
                   <label class="settings-toggle-row" for="toggle-subsolo-conteudo">
                     <span><strong>Ativar Conteúdo Secreto</strong><small>Activa o Subsolo e o mercado secreto de variedades raras.</small></span>
@@ -868,6 +868,33 @@
       </div>
     </div>
 
+    <div id="subsolo-tutorial" class="game-tutorial-overlay subsolo-tutorial-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="subsolo-tutorial-title" aria-describedby="subsolo-tutorial-summary" tabindex="-1">
+      <div class="game-tutorial-window subsolo-tutorial-window">
+        <header class="game-tutorial-header">
+          <div>
+            <p class="game-tutorial-eyebrow">GUIA INTERATIVO DO SUBSOLO</p>
+            <h2 id="subsolo-tutorial-title">Aprende o ciclo subterrâneo ao teu ritmo</h2>
+          </div>
+          <div class="game-tutorial-progress-wrap">
+            <span id="subsolo-tutorial-progress-label">1 / 9</span>
+            <progress id="subsolo-tutorial-progress" max="9" value="1" aria-label="Progresso do tutorial do Subsolo"></progress>
+          </div>
+          <button id="btn-subsolo-tutorial-close" class="btn-close-modal" type="button" aria-label="Fechar tutorial">×</button>
+        </header>
+        <div class="game-tutorial-layout">
+          <nav id="subsolo-tutorial-topics" class="game-tutorial-topics" aria-label="Temas do tutorial do Subsolo"></nav>
+          <main id="subsolo-tutorial-content" class="game-tutorial-content"></main>
+        </div>
+        <footer class="game-tutorial-footer">
+          <button id="btn-subsolo-tutorial-skip" class="btn-secondary" type="button">Ignorar tutorial</button>
+          <div class="game-tutorial-navigation">
+            <button id="btn-subsolo-tutorial-previous" class="btn-secondary" type="button">Tema anterior</button>
+            <button id="btn-subsolo-tutorial-next" class="btn-primary" type="button">Próximo tema</button>
+          </div>
+        </footer>
+      </div>
+    </div>
+
     <!-- Modais Temáticos do Subsolo -->
     <div id="modal-subsolo-cultivo" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="cultivo-title">
       <div class="modal-window cozy-card subsolo-modal-window">
@@ -878,8 +905,8 @@
         <div class="modal-body subsolo-modal-body">
           <div class="subsolo-top-bar-controls">
             <div id="subsolo-cultivo-speed-banner" class="subsolo-status-badge status-good">Velocidade: 100%</div>
-            <button type="button" class="btn-secondary btn-sm btn-subsolo-ctrl" onclick="window.__floristSubsoloUI.refillWaterTank()"><svg class="subsolo-btn-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5C12 2.5 5 11 5 15.5C5 19.36 8.13 22.5 12 22.5C15.87 22.5 19 19.36 19 15.5C19 11 12 2.5 12 2.5Z" fill="#06B6D4" stroke="#0891B2" stroke-width="1.6" stroke-linejoin="round"/></svg> Encher Água</button>
-            <button type="button" class="btn-secondary btn-sm btn-subsolo-ctrl" onclick="window.__floristSubsoloUI.buyFuelSupply()"><svg class="subsolo-btn-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6H16V20C16 20.6 15.6 21 15 21H5C4.4 21 4 20.6 4 20V6Z" fill="#7C2D12" stroke="#F97316" stroke-width="1.8"/><path d="M6 3H11V6H6V3Z" fill="#F97316"/><path d="M13 3L16 6" stroke="#F97316" stroke-width="1.8" stroke-linecap="round"/></svg> Comprar Combustível</button>
+            <button type="button" class="btn-secondary btn-sm btn-subsolo-ctrl" data-subsolo-action="refill-water"><svg class="subsolo-btn-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5C12 2.5 5 11 5 15.5C5 19.36 8.13 22.5 12 22.5C15.87 22.5 19 19.36 19 15.5C19 11 12 2.5 12 2.5Z" fill="#06B6D4" stroke="#0891B2" stroke-width="1.6" stroke-linejoin="round"/></svg> Encher Água</button>
+            <button type="button" class="btn-secondary btn-sm btn-subsolo-ctrl" data-subsolo-action="buy-fuel"><svg class="subsolo-btn-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6H16V20C16 20.6 15.6 21 15 21H5C4.4 21 4 20.6 4 20V6Z" fill="#7C2D12" stroke="#F97316" stroke-width="1.8"/><path d="M6 3H11V6H6V3Z" fill="#F97316"/><path d="M13 3L16 6" stroke="#F97316" stroke-width="1.8" stroke-linecap="round"/></svg> Comprar Combustível</button>
           </div>
           <div id="subsolo-cultivo-plots" class="subsolo-cards-grid"></div>
         </div>
@@ -926,7 +953,20 @@
     </div>
   </div>
 
+  <section id="cinematic-overlay" class="cinematic-overlay hidden" role="dialog" aria-modal="true" aria-label="Apresentação do jogo" aria-hidden="true">
+    <iframe id="cinematic-frame" title="Apresentação do FloristEver" src="about:blank" allow="fullscreen" tabindex="-1"></iframe>
+    <div id="cinematic-control-mask" class="cinematic-control-mask" aria-hidden="true" hidden></div>
+    <div id="cinematic-progress" class="cinematic-progress" role="progressbar" aria-label="Progresso da apresentação" aria-valuemin="0" aria-valuemax="46" aria-valuenow="0" hidden>
+      <span id="cinematic-progress-fill"></span>
+    </div>
+    <div id="cinematic-error" class="cinematic-error hidden" role="alert">
+      <p id="cinematic-error-message">Não foi possível carregar a apresentação.</p>
+      <button id="cinematic-retry" type="button" class="btn-primary">Tentar novamente</button>
+    </div>
+  </section>
+
   <!-- Scripts do Jogo como Módulos ES -->
+  <script src="js/build-info.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
