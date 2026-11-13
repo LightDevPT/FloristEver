@@ -18,8 +18,8 @@
 
   <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/svg+xml" href="imagens/logo.svg">
-  <link rel="icon" type="image/png" sizes="32x32" href="imagens/icons/favicon-v2.png">
+  <link rel="icon" type="image/svg+xml" href="imagens/favicon.svg">
+  <link rel="icon" type="image/png" sizes="64x64" href="imagens/icons/favicon-v3.png">
   <link rel="apple-touch-icon" sizes="180x180" href="imagens/icons/icon-180.png">
 
   <!-- Google Fonts com fallback seguro -->
@@ -51,7 +51,7 @@
     <header id="hud" class="hud-layer" aria-label="Painel de Estado">
       <!-- Moedas / Dinheiro -->
       <div class="hud-pill hud-coins" title="Saldo de moedas">
-        <span class="coin-icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="#F7C948" stroke="#2F5D4A" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="#FCE588" stroke="#2F5D4A" stroke-width="1.5"/><path d="M12 8.5V15.5M10 10.2C10 9.5 10.9 9 12 9C13.1 9 14 9.5 14 10.3C14 11.5 10 11.5 10 12.7C10 13.5 10.9 14 12 14C13.1 14 14 13.5 14 12.8" stroke="#2F5D4A" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+        <span class="coin-icon" aria-hidden="true"><img class="hud-svg-icon ui-icon icon-coin" src="imagens/FloristEver_moeda_jardim.svg" alt=""></span>
         <span id="hud-coin-amount" class="hud-value" aria-live="polite">0</span>
       </div>
 
@@ -439,7 +439,7 @@
             <div class="total-price-box">
               <span>Valor de Venda Estimado:</span>
               <div class="big-coin-price">
-                <span class="coin-icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="#F7C948" stroke="#2F5D4A" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="#FCE588" stroke="#2F5D4A" stroke-width="1.5"/><path d="M12 8.5V15.5M10 10.2C10 9.5 10.9 9 12 9C13.1 9 14 9.5 14 10.3C14 11.5 10 11.5 10 12.7C10 13.5 10.9 14 12 14C13.1 14 14 13.5 14 12.8" stroke="#2F5D4A" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+                <span class="coin-icon" aria-hidden="true"><img class="hud-svg-icon ui-icon icon-coin" src="imagens/FloristEver_moeda_jardim.svg" alt=""></span>
                 <span id="bouquet-computed-price">0</span>
               </div>
             </div>
@@ -784,7 +784,7 @@
         <h2>Que bom ver-te de volta!</h2>
         <p id="welcome-message">Os teus floristas e o caixa mantiveram a loja em funcionamento enquanto estiveste fora.</p>
         <div class="offline-earnings-pill" id="offline-earnings-box">
-          Ganhaste: <strong id="offline-earned-amount"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="#F7C948" stroke="#2F5D4A" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="#FCE588" stroke="#2F5D4A" stroke-width="1.5"/><path d="M12 8.5V15.5" stroke="#2F5D4A" stroke-width="1.5" stroke-linecap="round"/></svg><span id="offline-earned-value">+0</span></strong>
+          Ganhaste: <strong id="offline-earned-amount"><img class="hud-svg-icon ui-icon icon-coin" src="imagens/FloristEver_moeda_jardim.svg" alt="" aria-hidden="true"><span id="offline-earned-value">+0</span></strong>
         </div>
         <button id="btn-welcome-accept" class="btn-primary btn-large btn-bounce">Continuar a Jogar</button>
       </div>

@@ -1,10 +1,10 @@
 // FloristEver Service Worker
-const CACHE_NAME = 'floristever-v84';
+const CACHE_NAME = 'floristever-v86';
 const ASSETS_TO_CACHE = [
   './',
   './FloristEver_Termos_e_Condicoes.md',
   './imagens/icons/app-icon.ico',
-  './imagens/icons/favicon-v2.png',
+  './imagens/icons/favicon-v3.png',
   './imagens/icons/icon-1024.png',
   './imagens/icons/icon-128.png',
   './imagens/icons/icon-144.png',
@@ -22,6 +22,8 @@ const ASSETS_TO_CACHE = [
   './imagens/icons/icon-72.png',
   './imagens/icons/icon-96.png',
   './imagens/FloristEver_com_fundo_1x1.svg',
+  './imagens/FloristEver_moeda_jardim.svg',
+  './imagens/favicon.svg',
   './imagens/Logótipo sem fundo FloristEver.png',
   './imagens/logo.svg',
   './cinematic-assets/floristever-intro.html',

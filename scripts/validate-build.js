@@ -9,8 +9,8 @@ const requiredFiles = [
   'style.css',
   'manifest.json',
   'sw.js',
-  'imagens/logo.svg',
-  'imagens/icons/favicon-v2.png',
+  'imagens/favicon.svg',
+  'imagens/icons/favicon-v3.png',
   'imagens/FloristEver_com_fundo_1x1.svg',
   'imagens/Logótipo sem fundo FloristEver.png',
   'musicas/TrilhaSonara-defundo.ogg',
@@ -81,8 +81,8 @@ if (errors.length === 0) {
     errors.push('Missing or invalid app build mode configuration.');
   }
   if (
-    webLogo?.getAttribute('href') !== 'imagens/logo.svg'
-    || webPngIcon?.getAttribute('href') !== 'imagens/icons/favicon-v2.png'
+    webLogo?.getAttribute('href') !== 'imagens/favicon.svg'
+    || webPngIcon?.getAttribute('href') !== 'imagens/icons/favicon-v3.png'
     || onboardingLogo?.getAttribute('src') !== 'imagens/Logótipo sem fundo FloristEver.png'
   ) {
     errors.push('The web app is missing the configured FloristEver wordmark.');

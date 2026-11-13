@@ -182,7 +182,6 @@ export const HEARTS_GARDEN_THEME = Object.freeze({
     '--color-plum-text': '#542A40'
   }),
   hudIconMarkup: Object.freeze({
-    coin: '<circle cx="12" cy="12" r="9" fill="#FFC94A" stroke="#69364C" stroke-width="2"/><path d="M12 18S6.5 14.8 6.5 10.8C6.5 7.8 10.1 6.7 12 9.4C13.9 6.7 17.5 7.8 17.5 10.8C17.5 14.8 12 18 12 18Z" fill="#FFF4EA" stroke="#69364C" stroke-width="1.2"/>',
     basket: '<path d="M6 10L4 19C4 20.1 4.9 21 6 21H18C19.1 21 20 20.1 20 19L18 10H6Z" fill="#D88B69" stroke="#69364C" stroke-width="2" stroke-linejoin="round"/><path d="M5 10H19M8 10C8 6 9.8 4 12 4C14.2 4 16 6 16 10" stroke="#69364C" stroke-width="2" stroke-linecap="round"/><path d="M12 9C9 7 7 9 12 13C17 9 15 7 12 9Z" fill="#FF9EBC" stroke="#69364C" stroke-width="1"/>'
   }),
   pathColor: '#F4D5BE',

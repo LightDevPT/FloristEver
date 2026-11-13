@@ -250,7 +250,7 @@ export class ThemeManager {
 
   updateHudIconography() {
     if (typeof document === 'undefined') return;
-    const iconSelectors = { coin: '.coin-icon svg', basket: '.basket-icon svg' };
+    const iconSelectors = { basket: '.basket-icon svg' };
     for (const [iconName, selector] of Object.entries(iconSelectors)) {
       const icon = document.querySelector(selector);
       if (!icon) continue;

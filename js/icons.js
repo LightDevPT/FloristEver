@@ -4,11 +4,7 @@
 // ========================================================
 
 export const ICONS = {
-  coin: `<svg class="ui-icon icon-coin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <circle cx="12" cy="12" r="9" fill="#F7C948" stroke="#2F5D4A" stroke-width="2"/>
-    <circle cx="12" cy="12" r="6" fill="#FCE588" stroke="#2F5D4A" stroke-width="1.5"/>
-    <path d="M12 8.5V15.5M10 10.2C10 9.5 10.9 9 12 9C13.1 9 14 9.5 14 10.3C14 11.5 10 11.5 10 12.7C10 13.5 10.9 14 12 14C13.1 14 14 13.5 14 12.8" stroke="#2F5D4A" stroke-width="1.5" stroke-linecap="round"/>
-  </svg>`,
+  coin: '<img class="ui-icon icon-coin" src="./imagens/FloristEver_moeda_jardim.svg" alt="" aria-hidden="true">',
 
   basket: `<svg class="ui-icon icon-basket" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path d="M6 10L4 19C4 20.1 4.9 21 6 21H18C19.1 21 20 20.1 20 19L18 10H6Z" fill="#C99A6B" stroke="#2F5D4A" stroke-width="2" stroke-linejoin="round"/>

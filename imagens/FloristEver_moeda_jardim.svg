@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>FloristEver — moeda Flor de Jardim</title>
+  <defs>
+    <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff5a8"/>
+      <stop offset=".22" stop-color="#ffd34d"/>
+      <stop offset=".52" stop-color="#e99a18"/>
+      <stop offset=".78" stop-color="#b96a0b"/>
+      <stop offset="1" stop-color="#ffe17a"/>
+    </linearGradient>
+    <linearGradient id="face" x1=".15" y1="0" x2=".85" y2="1">
+      <stop offset="0" stop-color="#fff8c9"/>
+      <stop offset=".45" stop-color="#ffdb69"/>
+      <stop offset="1" stop-color="#f2a927"/>
+    </linearGradient>
+    <linearGradient id="petal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffef2"/>
+      <stop offset=".65" stop-color="#fff0c7"/>
+      <stop offset="1" stop-color="#f4b84d"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b6f45b"/>
+      <stop offset=".5" stop-color="#49bd3c"/>
+      <stop offset="1" stop-color="#08713a"/>
+    </linearGradient>
+    <linearGradient id="bee" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe66a"/>
+      <stop offset="1" stop-color="#f5a900"/>
+    </linearGradient>
+    <filter id="drop" x="-25%" y="-25%" width="150%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="8"/>
+      <feOffset dy="8"/>
+      <feComponentTransfer><feFuncA type="linear" slope=".32"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <g id="flowerPetal">
+      <ellipse cx="0" cy="-54" rx="22" ry="39" fill="url(#petal)" stroke="#d88c20" stroke-width="4"/>
+      <ellipse cx="-5" cy="-61" rx="7" ry="19" fill="#fff" opacity=".75"/>
+    </g>
+  </defs>
+
+  <!-- Coin body -->
+  <g filter="url(#drop)">
+    <circle cx="256" cy="250" r="218" fill="#87500c" stroke="#68400b" stroke-width="8"/>
+    <circle cx="256" cy="242" r="211" fill="url(#rim)" stroke="#fff0a0" stroke-width="7"/>
+    <circle cx="256" cy="242" r="187" fill="url(#face)" stroke="#c77b12" stroke-width="7"/>
+    <circle cx="256" cy="242" r="174" fill="none" stroke="#fff3b1" stroke-width="5"/>
+    <circle cx="256" cy="242" r="161" fill="none" stroke="#d89420" stroke-width="3" stroke-dasharray="3 11"/>
+  </g>
+
+  <!-- Engraved garden leaves -->
+  <g fill="url(#leaf)" stroke="#17642c" stroke-width="5" stroke-linejoin="round">
+    <path d="M119 202 C79 172 83 130 137 145 C159 165 148 188 119 202Z"/>
+    <path d="M393 202 C433 172 429 130 375 145 C353 165 364 188 393 202Z"/>
+    <path d="M120 300 C80 330 86 370 139 357 C160 337 149 314 120 300Z"/>
+    <path d="M392 300 C432 330 426 370 373 357 C352 337 363 314 392 300Z"/>
+  </g>
+  <g fill="none" stroke="#d4ff8a" stroke-width="4" stroke-linecap="round">
+    <path d="M111 187 Q126 164 139 155"/>
+    <path d="M401 187 Q386 164 373 155"/>
+    <path d="M111 315 Q126 338 139 347"/>
+    <path d="M401 315 Q386 338 373 347"/>
+  </g>
+
+  <!-- Central flower -->
+  <g transform="translate(256 241)" filter="url(#drop)">
+    <use href="#flowerPetal" transform="rotate(0)"/>
+    <use href="#flowerPetal" transform="rotate(45)"/>
+    <use href="#flowerPetal" transform="rotate(90)"/>
+    <use href="#flowerPetal" transform="rotate(135)"/>
+    <use href="#flowerPetal" transform="rotate(180)"/>
+    <use href="#flowerPetal" transform="rotate(225)"/>
+    <use href="#flowerPetal" transform="rotate(270)"/>
+    <use href="#flowerPetal" transform="rotate(315)"/>
+    <circle r="39" fill="#ffb900" stroke="#d8790b" stroke-width="7"/>
+    <circle cx="-12" cy="-13" r="12" fill="#fff7a8"/>
+    <circle cx="13" cy="12" r="7" fill="#ffdf55"/>
+  </g>
+
+  <!-- Tiny bee mascot hovering above the flower -->
+  <g transform="translate(351 119) rotate(16)" filter="url(#drop)">
+    <ellipse cx="-16" cy="-21" rx="17" ry="24" fill="#d9fbff" stroke="#4d9ca0" stroke-width="4" transform="rotate(-28 -16 -21)"/>
+    <ellipse cx="15" cy="-24" rx="17" ry="24" fill="#e9ffff" stroke="#4d9ca0" stroke-width="4" transform="rotate(28 15 -24)"/>
+    <ellipse cx="0" cy="8" rx="35" ry="27" fill="url(#bee)" stroke="#75400b" stroke-width="5"/>
+    <path d="M-13 -17 Q-2 7 -10 32" fill="none" stroke="#56300b" stroke-width="10"/>
+    <path d="M13 -17 Q4 8 13 32" fill="none" stroke="#56300b" stroke-width="10"/>
+    <circle cx="-12" cy="1" r="4.5" fill="#2d210f"/>
+    <circle cx="10" cy="1" r="4.5" fill="#2d210f"/>
+    <path d="M-5 14 Q0 19 6 14" fill="none" stroke="#8a3d18" stroke-width="3" stroke-linecap="round"/>
+    <path d="M-28 24 Q-42 37 -48 29 M28 24 Q42 37 48 29" fill="none" stroke="#56300b" stroke-width="5" stroke-linecap="round"/>
+    <path d="M-3 -20 Q-13 -36 -24 -31 M8 -20 Q17 -37 28 -31" fill="none" stroke="#56300b" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <!-- Tiny decorative blossoms around the lower rim -->
+  <g transform="translate(156 376) scale(.42)">
+    <use href="#flowerPetal" transform="rotate(0)"/>
+    <use href="#flowerPetal" transform="rotate(72)"/>
+    <use href="#flowerPetal" transform="rotate(144)"/>
+    <use href="#flowerPetal" transform="rotate(216)"/>
+    <use href="#flowerPetal" transform="rotate(288)"/>
+    <circle r="20" fill="#ffb900" stroke="#d8790b" stroke-width="5"/>
+  </g>
+  <g transform="translate(356 376) scale(.42)">
+    <use href="#flowerPetal" transform="rotate(0)"/>
+    <use href="#flowerPetal" transform="rotate(72)"/>
+    <use href="#flowerPetal" transform="rotate(144)"/>
+    <use href="#flowerPetal" transform="rotate(216)"/>
+    <use href="#flowerPetal" transform="rotate(288)"/>
+    <circle r="20" fill="#ffb900" stroke="#d8790b" stroke-width="5"/>
+  </g>
+
+  <!-- Coin glints -->
+  <g fill="#fffde0" opacity=".95">
+    <path d="M151 112 L158 132 L178 139 L158 146 L151 166 L144 146 L124 139 L144 132Z"/>
+    <path d="M408 245 L413 259 L427 264 L413 269 L408 283 L403 269 L389 264 L403 259Z"/>
+    <circle cx="330" cy="83" r="5"/>
+    <circle cx="102" cy="260" r="4"/>
+  </g>
+  <path d="M119 157 Q169 76 256 70" fill="none" stroke="#fffbd2" stroke-width="7" opacity=".65" stroke-linecap="round"/>
+</svg>

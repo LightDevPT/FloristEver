@@ -544,7 +544,8 @@ class Game {
           document.body.classList.remove('garden-decoration-mode');
         }
 
-        const station = this.subsoloRenderer?.getStationAt(screenX, screenY);
+        const worldPosition = this.screenToWorld(screenX, screenY);
+        const station = this.subsoloRenderer?.getStationAt(worldPosition.x, worldPosition.y);
         if (station === 'ladder') {
           this.sceneManager.startSubir();
           return;
@@ -751,17 +752,27 @@ class Game {
   }
 
   screenToWorld(screenX, screenY) {
-    const dpr = window.devicePixelRatio || 1;
     const viewW = document.documentElement.clientWidth || window.innerWidth;
     const viewH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const zoom = this.sceneManager?.isSubsoloActive()
+      ? this.getSubsoloZoom(viewW, viewH)
+      : this.camera.zoom;
 
     const cx = viewW / 2;
     const cy = viewH / 2;
 
-    const wx = (screenX - cx) / this.camera.zoom + this.camera.x;
-    const wy = (screenY - cy) / this.camera.zoom + this.camera.y;
+    const wx = (screenX - cx) / zoom + this.camera.x;
+    const wy = (screenY - cy) / zoom + this.camera.y;
 
     return { x: wx, y: wy };
+  }
+
+  getSubsoloZoom(viewW, viewH) {
+    return Math.max(
+      this.camera.zoom,
+      viewW / this.subsoloRenderer.worldWidth,
+      viewH / this.subsoloRenderer.worldHeight
+    );
   }
 
   handleActionInteraction() {
@@ -1935,6 +1946,26 @@ class Game {
       const subsoloBounds = { minX: 110, maxX: 960, minY: 320, maxY: 440 };
       this.player.update(dt, speedMult, subsoloBounds, null);
 
+      const viewW = document.documentElement.clientWidth || window.innerWidth;
+      const viewH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const zoom = this.getSubsoloZoom(viewW, viewH);
+      const halfWorldWidth = viewW / (2 * zoom);
+      const halfWorldHeight = viewH / (2 * zoom);
+      this.camera.targetX = halfWorldWidth * 2 >= this.subsoloRenderer.worldWidth
+        ? this.subsoloRenderer.worldWidth / 2
+        : Math.max(halfWorldWidth, Math.min(
+          this.player.x,
+          this.subsoloRenderer.worldWidth - halfWorldWidth
+        ));
+      this.camera.targetY = halfWorldHeight * 2 >= this.subsoloRenderer.worldHeight
+        ? this.subsoloRenderer.worldHeight / 2
+        : Math.max(halfWorldHeight, Math.min(
+          this.player.y,
+          this.subsoloRenderer.worldHeight - halfWorldHeight
+        ));
+      this.camera.x = lerp(this.camera.x, this.camera.targetX, 5.0 * dt);
+      this.camera.y = lerp(this.camera.y, this.camera.targetY, 5.0 * dt);
+
       // Feedback dinâmico de interação com a estação subterrânea mais próxima
       const px = this.player.x;
       let promptLabel = '';
@@ -2096,7 +2127,21 @@ class Game {
 
     // ── SUBSOLO: renderiza o mundo subterrâneo em vez da superfície ──
     if (this.sceneManager?.isSubsoloActive()) {
-      this.subsoloRenderer?.render(this.ctx, viewW, viewH);
+      this.ctx.fillStyle = '#171B20';
+      this.ctx.fillRect(0, 0, viewW, viewH);
+      const zoom = this.getSubsoloZoom(viewW, viewH);
+      const visibleBounds = {
+        left: this.camera.x - viewW / (2 * zoom),
+        right: this.camera.x + viewW / (2 * zoom),
+        top: this.camera.y - viewH / (2 * zoom),
+        bottom: this.camera.y + viewH / (2 * zoom)
+      };
+      this.ctx.save();
+      this.ctx.translate(viewW / 2, viewH / 2);
+      this.ctx.scale(zoom, zoom);
+      this.ctx.translate(-this.camera.x, -this.camera.y);
+      this.subsoloRenderer?.render(this.ctx, visibleBounds);
+      this.ctx.restore();
       this.sceneManager.drawTransitionOverlay(this.ctx, viewW, viewH);
       return;
     }

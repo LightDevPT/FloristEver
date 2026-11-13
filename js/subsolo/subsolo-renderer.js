@@ -11,6 +11,10 @@ export class SubsoloRenderer {
   constructor(game, subsoloManager) {
     this.game = game;
     this.manager = subsoloManager;
+    this.worldWidth = 1040;
+    this.worldHeight = 620;
+    this.coinImage = new Image();
+    this.coinImage.src = new URL('../../imagens/FloristEver_moeda_jardim.svg', import.meta.url).href;
     this.rats = [
       { x: 260, y: 380, vx: 20, timer: 0 },
       { x: 520, y: 400, vx: -15, timer: 2 }
@@ -42,19 +46,16 @@ export class SubsoloRenderer {
     }
   }
 
-  render(ctx, viewW, viewH) {
+  render(ctx, visibleBounds) {
     const data = this.manager.data;
 
     // 1. Fundo do Túnel de Esgoto Acolhedor
     ctx.save();
-    ctx.fillStyle = '#171B20';
-    ctx.fillRect(0, 0, viewW, viewH);
-
     // Paredes de tijolo cartoon
-    this.drawBrickWall(ctx, viewW);
+    this.drawBrickWall(ctx, visibleBounds);
 
     // Canos suspensos no teto
-    this.drawOverheadPipes(ctx, viewW);
+    this.drawOverheadPipes(ctx, visibleBounds);
 
     // Poças de água no chão
     this.drawWaterPuddles(ctx);
@@ -102,22 +103,25 @@ export class SubsoloRenderer {
     return null;
   }
 
-  drawBrickWall(ctx, viewW) {
+  drawBrickWall(ctx, visibleBounds) {
+    const { left, right, top, bottom } = visibleBounds;
+    const viewW = right - left;
     ctx.save();
     ctx.fillStyle = PALETTE_SUBSOLO.brick;
-    ctx.fillRect(0, 80, viewW, 260);
+    ctx.fillRect(left, top, viewW, 340 - top);
 
     // Linhas de tijolos
     ctx.strokeStyle = PALETTE_SUBSOLO.brickDark;
     ctx.lineWidth = 1.5;
     for (let y = 90; y <= 330; y += 22) {
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(viewW, y);
+      ctx.moveTo(left, y);
+      ctx.lineTo(right, y);
       ctx.stroke();
 
       const offset = (Math.floor(y / 22) % 2) * 25;
-      for (let x = offset; x < viewW; x += 50) {
+      const firstX = Math.floor((left - offset) / 50) * 50 + offset;
+      for (let x = firstX; x < right; x += 50) {
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(x, y + 22);
@@ -127,28 +131,30 @@ export class SubsoloRenderer {
 
     // Pavimento de pedra escura
     ctx.fillStyle = '#1D2023';
-    ctx.fillRect(0, 340, viewW, 280);
+    ctx.fillRect(left, 340, viewW, Math.max(280, bottom - 340));
     ctx.strokeStyle = '#151719';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(0, 340);
-    ctx.lineTo(viewW, 340);
+    ctx.moveTo(left, 340);
+    ctx.lineTo(right, 340);
     ctx.stroke();
 
     ctx.restore();
   }
 
-  drawOverheadPipes(ctx, viewW) {
+  drawOverheadPipes(ctx, visibleBounds) {
+    const { left, right } = visibleBounds;
     ctx.save();
     ctx.fillStyle = PALETTE_SUBSOLO.pipe;
-    ctx.fillRect(0, 85, viewW, 14);
+    ctx.fillRect(left, 85, right - left, 14);
     ctx.strokeStyle = '#353E45';
     ctx.lineWidth = 2;
-    ctx.strokeRect(0, 85, viewW, 14);
+    ctx.strokeRect(left, 85, right - left, 14);
 
     // Abraçadeiras do cano
     ctx.fillStyle = '#2A2F33';
-    for (let x = 80; x < viewW; x += 140) {
+    const firstClampX = 80 + Math.ceil((left - 80) / 140) * 140;
+    for (let x = firstClampX; x < right; x += 140) {
       ctx.fillRect(x, 82, 8, 20);
     }
     ctx.restore();
@@ -420,23 +426,9 @@ export class SubsoloRenderer {
 
     switch (type) {
       case 'coin':
-        ctx.fillStyle = '#F7C948';
-        ctx.strokeStyle = '#FCE588';
-        ctx.beginPath();
-        ctx.arc(12, 12, 9, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.strokeStyle = '#8A5E16';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(12, 12, 6, 0, Math.PI * 2);
-        ctx.moveTo(14, 9);
-        ctx.lineTo(10, 9);
-        ctx.lineTo(10, 12);
-        ctx.lineTo(14, 12);
-        ctx.lineTo(14, 15);
-        ctx.lineTo(10, 15);
-        ctx.stroke();
+        if (this.coinImage.complete && this.coinImage.naturalWidth > 0) {
+          ctx.drawImage(this.coinImage, 2, 2, 20, 20);
+        }
         break;
       case 'respect': {
         ctx.fillStyle = '#C084FC';

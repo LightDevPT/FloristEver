@@ -17,6 +17,7 @@ export class SecretCustomerManager {
     this.game = game;
     this.subsolo = subsoloManager;
     this.activeCustomer = null;
+    this.tradeRequested = false;
     this.pendingQueue = [];
     this.spawnTimer = 0;
     this.nextSpawnInterval = 60; // segundos
@@ -41,6 +42,7 @@ export class SecretCustomerManager {
   }
 
   spawnSecretCustomer() {
+    this.tradeRequested = false;
     // Escolhe um pedido com base no nível de respeito
     const sLvl = this.subsolo.data.respeito.nivel;
     const availableCodes = GARDEN_CODE_DICTIONARY.filter((c) => {
@@ -81,6 +83,10 @@ export class SecretCustomerManager {
       const dist = distance(c.x, c.y, c.targetX, c.targetY);
       if (dist < 8) {
         c.state = 'waiting';
+        if (this.tradeRequested) {
+          this.tradeRequested = false;
+          this.openSecretTradeModal();
+        }
       } else {
         const dx = (c.targetX - c.x) / dist;
         const dy = (c.targetY - c.y) / dist;
@@ -94,6 +100,7 @@ export class SecretCustomerManager {
       const dist = distance(c.x, c.y, c.exitX, c.exitY);
       if (dist < 10) {
         this.activeCustomer = null;
+        this.tradeRequested = false;
       } else {
         const dx = (c.exitX - c.x) / dist;
         const dy = (c.exitY - c.y) / dist;
@@ -107,10 +114,15 @@ export class SecretCustomerManager {
    * Verifica se o jogador clicou no cliente secreto para atendimento manual.
    */
   checkPlayerInteraction(worldX, worldY) {
-    if (!this.activeCustomer || this.activeCustomer.state !== 'waiting') return false;
+    if (!this.activeCustomer || this.activeCustomer.state === 'leaving') return false;
     const dist = distance(worldX, worldY, this.activeCustomer.x, this.activeCustomer.y);
     if (dist <= 35) {
-      this.openSecretTradeModal();
+      if (this.activeCustomer.state === 'waiting') {
+        this.openSecretTradeModal();
+      } else {
+        this.tradeRequested = true;
+        this.game.hud?.showToast('O cliente está a caminho do balcão. A transação abrirá quando chegar.', 'check');
+      }
       return true;
     }
     return false;
