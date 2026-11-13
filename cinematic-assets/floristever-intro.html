@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FloristEver — Cinemático</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@800;900&display=swap">
+<style>
+:root{--bg:#eef3e4;--fg:#2f6b4f;--bar:#fff;--ac:#e8527a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13211a;--fg:#d9efd8;--bar:#1f3328}}
+:root[data-theme="dark"]{--bg:#13211a;--fg:#d9efd8;--bar:#1f3328}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:Nunito,'Trebuchet MS',system-ui,sans-serif;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+canvas{width:min(96vw,calc((100vh - 110px)*16/9));aspect-ratio:16/9;border-radius:20px;border:4px solid var(--fg);background:#a9d6a0}
+.bar{display:flex;gap:10px;align-items:center;width:min(96vw,900px);padding:8px 12px;background:var(--bar);border:3px solid var(--fg);border-radius:999px}
+button{font:inherit;color:var(--fg);background:transparent;border:3px solid var(--fg);border-radius:999px;padding:4px 14px;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+input{flex:1;accent-color:var(--ac)}
+</style>
+</head>
+<body>
+<canvas id="c" width="1280" height="720" aria-label="Cinemático de apresentação do FloristEver"></canvas>
+<div class="bar"><button id="pp">Pausa</button><button id="rp">Reiniciar</button><input id="pr" type="range" min="0" max="1000" value="0" aria-label="Progresso"></div>
+<script src="./floristever-intro.js"></script>
+</body>
+</html>

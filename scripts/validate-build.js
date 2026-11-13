@@ -31,10 +31,10 @@ const requiredFiles = [
   'js/ui/cinematic-manager.js',
   'cinematic-assets/floristever.html',
   'cinematic-assets/subsolo.html',
-  'cinematics/floristever-intro.html',
-  'cinematics/floristever-intro.js',
-  'cinematics/subsolo-intro.html',
-  'cinematics/subsolo-intro.js'
+  'cinematic-assets/floristever-intro.html',
+  'cinematic-assets/floristever-intro.js',
+  'cinematic-assets/subsolo-intro.html',
+  'cinematic-assets/subsolo-intro.js'
 ];
 
 const errors = [];
@@ -64,13 +64,13 @@ if (errors.length === 0) {
   ];
   const integratedCinematicPages = [
     {
-      page: 'cinematics/floristever-intro',
-      script: 'cinematics/floristever-intro.js',
+      page: 'cinematic-assets/floristever-intro',
+      script: 'cinematic-assets/floristever-intro.js',
       scriptSource: './floristever-intro.js'
     },
     {
-      page: 'cinematics/subsolo-intro',
-      script: 'cinematics/subsolo-intro.js',
+      page: 'cinematic-assets/subsolo-intro',
+      script: 'cinematic-assets/subsolo-intro.js',
       scriptSource: './subsolo-intro.js'
     }
   ];
@@ -160,8 +160,8 @@ if (errors.length === 0) {
   }
   const cinematicManager = fs.readFileSync(path.join(DIST, 'js', 'ui', 'cinematic-manager.js'), 'utf8');
   if (
-    !cinematicManager.includes('../../cinematics/floristever-intro.html')
-    || !cinematicManager.includes('../../cinematics/subsolo-intro.html')
+    !cinematicManager.includes('../../cinematic-assets/floristever-intro.html')
+    || !cinematicManager.includes('../../cinematic-assets/subsolo-intro.html')
   ) {
     errors.push('The cinematic manager must load the iOS-compatible integrated animations.');
   }

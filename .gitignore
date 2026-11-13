@@ -8,5 +8,21 @@ android/
 *.log
 .env
 .env.*
-!.env.example
-!**/.env.example
+/.vscode/
+/tests/
+/docs/
+/cinematics/
+/light-group-login/
+/netlify/functions/
+/download site/
+/antivibe.md
+/scripts/subsolo-simulation.mjs
+/.local-private/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets/
+credentials/

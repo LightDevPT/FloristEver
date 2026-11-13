@@ -6,11 +6,11 @@ const DIST = path.join(ROOT, 'dist');
 const FILES = ['index.html', 'style.css', 'manifest.json', 'sw.js'];
 const ADDITIONAL_FILES = [
   {
-    source: 'docs/FloristEver_Termos_e_Condicoes.md',
+    source: 'FloristEver_Termos_e_Condicoes.md',
     destination: 'FloristEver_Termos_e_Condicoes.md'
   }
 ];
-const DIRECTORIES = ['js', 'imagens', 'musicas', 'cinematic-assets', 'cinematics'];
+const DIRECTORIES = ['js', 'imagens', 'musicas', 'cinematic-assets'];
 const LOGIN_API_ORIGIN = new URL(process.env.LOGIN_API_ORIGIN || 'https://floristever.netlify.app').origin;
 const LOGIN_API_BASE = `${LOGIN_API_ORIGIN}/api/v1`;
 
@@ -127,10 +127,10 @@ function writeSecurityHeaderFiles() {
     '/cinematic-assets/subsolo.html',
     `  Content-Security-Policy: ${cinematicCsp}`,
     '  X-Frame-Options: SAMEORIGIN',
-    '/cinematics/floristever-intro.html',
+    '/cinematic-assets/floristever-intro.html',
     `  Content-Security-Policy: ${cinematicCsp}`,
     '  X-Frame-Options: SAMEORIGIN',
-    '/cinematics/subsolo-intro.html',
+    '/cinematic-assets/subsolo-intro.html',
     `  Content-Security-Policy: ${cinematicCsp}`,
     '  X-Frame-Options: SAMEORIGIN'
   ].join('\n');

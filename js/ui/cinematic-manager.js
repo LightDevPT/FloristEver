@@ -2,12 +2,12 @@ const CINEMATICS = Object.freeze({
   floristever: Object.freeze({
     id: 'floristever-intro',
     title: 'Apresentação do FloristEver',
-    src: new URL('../../cinematics/floristever-intro.html', import.meta.url).href
+    src: new URL('../../cinematic-assets/floristever-intro.html', import.meta.url).href
   }),
   subsolo: Object.freeze({
     id: 'subsolo-intro',
     title: 'Apresentação do Subsolo',
-    src: new URL('../../cinematics/subsolo-intro.html', import.meta.url).href
+    src: new URL('../../cinematic-assets/subsolo-intro.html', import.meta.url).href
   })
 });
 

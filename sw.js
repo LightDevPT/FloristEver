@@ -2,7 +2,7 @@
 const CACHE_NAME = 'floristever-v84';
 const ASSETS_TO_CACHE = [
   './',
-  './docs/FloristEver_Termos_e_Condicoes.md',
+  './FloristEver_Termos_e_Condicoes.md',
   './imagens/icons/app-icon.ico',
   './imagens/icons/favicon-v2.png',
   './imagens/icons/icon-1024.png',
@@ -24,10 +24,10 @@ const ASSETS_TO_CACHE = [
   './imagens/FloristEver_com_fundo_1x1.svg',
   './imagens/Logótipo sem fundo FloristEver.png',
   './imagens/logo.svg',
-  './cinematics/floristever-intro.html',
-  './cinematics/floristever-intro.js',
-  './cinematics/subsolo-intro.html',
-  './cinematics/subsolo-intro.js',
+  './cinematic-assets/floristever-intro.html',
+  './cinematic-assets/floristever-intro.js',
+  './cinematic-assets/subsolo-intro.html',
+  './cinematic-assets/subsolo-intro.js',
   './index.html',
   './js/assets.js',
   './js/audio.js',

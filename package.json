@@ -9,7 +9,6 @@
     "build:web": "node scripts/build-web.js",
     "validate": "npm run build:web && npm run validate:content && node scripts/validate-build.js",
     "validate:content": "node --experimental-default-type=module scripts/validate-content.mjs",
-    "test:game": "node --experimental-default-type=module --test tests/content-validation.test.mjs tests/save-migrations.test.mjs tests/customer-orders.test.mjs tests/assistant-skills.test.mjs tests/theme-system.test.mjs tests/audio.test.mjs tests/shop-expansion.test.mjs tests/hud-customizer.test.mjs tests/long-term-projects.test.mjs tests/herbarium-challenge-grace.test.mjs tests/objective-care.test.mjs tests/garden-content.test.mjs tests/garden-paths.test.mjs tests/local-test-mode.test.mjs tests/main-module-syntax.test.mjs tests/cinematic-manager.test.mjs tests/player-collision.test.mjs tests/subsolo.test.mjs",
     "standalone": "node build_standalone.js",
     "electron:start": "npm run build:web && electron .",
     "win:pack": "npm run validate && electron-builder --win portable",
@@ -23,32 +22,17 @@
     "android:share:debug": "npm run android:apk:debug && node scripts/package-android-share.js debug",
     "android:share:release": "npm run android:apk:release && node scripts/package-android-share.js release",
     "android:share:existing": "node scripts/package-android-share.js debug",
-    "login:dev": "cd light-group-login && npm run dev",
-    "login:test": "cd light-group-login && npm test",
     "security:audit": "npm audit --audit-level=moderate"
   },
   "dependencies": {
-    "@capacitor/core": "^7.4.3",
-    "@supabase/supabase-js": "^2.117.3",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.6",
-    "dotenv": "^18.0.7",
-    "express": "^5.3.0",
-    "express-rate-limit": "^8.7.1",
-    "helmet": "^8.3.0",
-    "jsdom": "^29.1.1",
-    "jsonwebtoken": "^9.0.3",
-    "nodemailer": "^10.1.0",
-    "pino": "^10.4.0",
-    "pino-http": "^11.0.0",
-    "serverless-http": "^4.0.0",
-    "zod": "^4.6.5"
+    "@capacitor/core": "^7.4.3"
   },
   "devDependencies": {
     "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "^7.4.3",
     "electron": "^44.5.1",
     "electron-builder": "^26.0.12",
+    "jsdom": "^29.1.1",
     "puppeteer-core": "^25.12.0"
   },
   "build": {

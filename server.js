@@ -61,8 +61,8 @@ const SECURITY_HEADERS = {
 const CINEMATIC_PATHS = new Set([
   '/cinematic-assets/floristever.html',
   '/cinematic-assets/subsolo.html',
-  '/cinematics/floristever-intro.html',
-  '/cinematics/subsolo-intro.html'
+  '/cinematic-assets/floristever-intro.html',
+  '/cinematic-assets/subsolo-intro.html'
 ]);
 const CINEMATIC_SECURITY_HEADERS = {
   ...SECURITY_HEADERS,
