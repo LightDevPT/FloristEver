@@ -95,7 +95,7 @@ export class CinematicManager {
     this.overlay.classList.remove('hidden');
     document.body.classList.add('cinematic-open');
     this.frame.title = cinematic.title;
-    this.frame.focus();
+    this.skipButton.focus();
     this.loadActiveCinematic();
     return true;
   }
@@ -228,11 +228,11 @@ export class CinematicManager {
   retry() {
     if (!this.active) return;
     this.loadActiveCinematic();
-    this.frame.focus();
+    this.skipButton.focus();
   }
 
   skip() {
-    if (!this.active || this.error.classList.contains('hidden')) return;
+    if (!this.active) return;
     this.complete(this.active);
   }
 
@@ -259,6 +259,9 @@ export class CinematicManager {
     if (canRestoreFocus) this.previousFocus.focus();
     else this.game?.canvas?.focus?.();
     this.previousFocus = null;
+    if (this.active === active || !active) {
+      this.active = null;
+    }
   }
 
   destroy() {
@@ -268,5 +271,6 @@ export class CinematicManager {
     }
     this.frame.removeEventListener('load', this.handleFrameLoad);
     window.removeEventListener('resize', this.handleResize);
+    this.active = null;
   }
 }

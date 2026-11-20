@@ -97,6 +97,15 @@ export class DeveloperToolsPanel {
     this.game = game || (typeof window !== 'undefined' ? window.floristGame : null);
     this.panel = typeof document !== 'undefined' ? document.getElementById('developer-tools-panel') : null;
     this.quickDevBtn = typeof document !== 'undefined' ? document.getElementById('btn-open-dev-tools') : null;
+    this.performanceHud = null;
+    this.performanceHudEnabled = false;
+    this.performanceFrames = [];
+    this.lastPerformanceHudUpdate = 0;
+    this.lastPageMemoryMeasureAt = 0;
+    this.pageMemoryMeasurePending = false;
+    this.pageMemoryBytes = null;
+    this.pageMemoryStatus = 'A medir…';
+    this.performanceHudMoved = false;
     this.render();
     this.refreshAccess();
   }
@@ -109,7 +118,9 @@ export class DeveloperToolsPanel {
       const isNativeApp = Boolean(window.Capacitor?.isNativePlatform?.() || protocol === 'capacitor:');
       const isElectronApp = protocol === 'file:';
       const isDevBuild = window.floristEverBuildInfo?.devMode === true;
-      const hasDevFlag = window.location?.search?.includes('dev') || isLocalFullTestMode(window.location);
+      const hasDevFlag = isDevBuild && (
+        window.location?.search?.includes('dev') || isLocalFullTestMode(window.location)
+      );
       if (isNativeApp || isElectronApp) {
         if (isDevBuild) return true;
       } else if (isLocalHost || hasDevFlag || isDevBuild) {
@@ -128,6 +139,7 @@ export class DeveloperToolsPanel {
     if (this.quickDevBtn) {
       this.quickDevBtn.classList.toggle('hidden', !authorized);
     }
+    if (!authorized && this.performanceHudEnabled) this.setPerformanceHudEnabled(false);
   }
 
   render() {
@@ -142,6 +154,12 @@ export class DeveloperToolsPanel {
       </header>
       <p class="setting-help">Controlos de teste para o progresso desta conta e do update Subsolo (v2.0.0). As alterações ficam guardadas no dispositivo.</p>
       
+      <details class="developer-tools-section">
+        <summary>Desempenho</summary>
+        <p class="setting-help">Mostra métricas de renderização em tempo real. A recolha só começa quando o monitor está ativo.</p>
+        <button type="button" class="btn-secondary developer-tools-apply" data-dev-performance-toggle aria-pressed="false">Mostrar métricas no ecrã</button>
+      </details>
+
       <details class="developer-tools-section" open>
         <summary>🌿 Subsolo (Update v2.0.0)</summary>
         <p class="setting-help">Atalhos rápidos para desbloquear e testar todas as funcionalidades subterrâneas.</p>
@@ -221,11 +239,286 @@ export class DeveloperToolsPanel {
     }
 
     this.panel.addEventListener('click', (event) => {
+      const performanceToggle = event.target.closest('[data-dev-performance-toggle]');
+      if (performanceToggle) {
+        this.setPerformanceHudEnabled(!this.performanceHudEnabled);
+        return;
+      }
       const button = event.target.closest('[data-dev-action]');
       if (!button) return;
       this.runAction(button.dataset.devAction);
     });
     this.panel.addEventListener('toggle', () => this.syncFields(), true);
+  }
+
+  isPerformanceHudEnabled() {
+    return this.performanceHudEnabled;
+  }
+
+  setPerformanceHudEnabled(enabled) {
+    const authorized = this.isAuthorized();
+    this.performanceHudEnabled = authorized && enabled;
+    const toggle = this.panel?.querySelector('[data-dev-performance-toggle]');
+    if (toggle) {
+      toggle.setAttribute('aria-pressed', String(this.performanceHudEnabled));
+      toggle.textContent = this.performanceHudEnabled
+        ? 'Ocultar métricas do ecrã'
+        : 'Mostrar métricas no ecrã';
+    }
+    if (!authorized) {
+      this.performanceHud?.classList.add('hidden');
+      return;
+    }
+    if (!this.performanceHud && this.performanceHudEnabled) {
+      this.performanceHud = document.createElement('aside');
+      this.performanceHud.id = 'developer-performance-hud';
+      this.performanceHud.className = 'developer-performance-hud';
+      this.performanceHud.setAttribute('aria-label', 'Monitor de desempenho');
+      this.performanceHud.innerHTML = `
+        <div class="developer-performance-hud-header">
+          <strong>Desempenho · Dev</strong>
+          <span>arrastar para mover</span>
+          <button type="button" data-dev-performance-close aria-label="Ocultar monitor">×</button>
+        </div>
+        <dl>
+          <div><dt>FPS</dt><dd data-performance-fps>—</dd></div>
+          <div><dt>Frame médio</dt><dd data-performance-frame>—</dd></div>
+          <div><dt>Atualização</dt><dd data-performance-update>—</dd></div>
+          <div><dt>Renderização</dt><dd data-performance-render>—</dd></div>
+          <div><dt>Heap JS</dt><dd data-performance-memory>—</dd></div>
+          <div><dt>RAM da página</dt><dd data-performance-page-memory>—</dd></div>
+          <div><dt>RAM dispositivo</dt><dd data-performance-device-memory>—</dd></div>
+          <div><dt>Elementos DOM</dt><dd data-performance-dom>—</dd></div>
+          <div><dt>Canvas</dt><dd data-performance-canvas>—</dd></div>
+        </dl>
+        <p>RAM da página depende do suporte do navegador; a RAM do dispositivo é uma estimativa.</p>
+      `;
+      const header = this.performanceHud.querySelector('.developer-performance-hud-header');
+      let dragOffsetX = 0;
+      let dragOffsetY = 0;
+      header.addEventListener('pointerdown', (event) => {
+        if (event.target.closest('button')) return;
+        const rect = this.performanceHud.getBoundingClientRect();
+        dragOffsetX = event.clientX - rect.left;
+        dragOffsetY = event.clientY - rect.top;
+        this.performanceHud.style.left = `${rect.left}px`;
+        this.performanceHud.style.right = 'auto';
+        this.performanceHud.style.top = `${rect.top}px`;
+        this.performanceHudMoved = true;
+        header.setPointerCapture(event.pointerId);
+        this.performanceHud.classList.add('is-dragging');
+        event.preventDefault();
+      });
+      header.addEventListener('pointermove', (event) => {
+        if (!header.hasPointerCapture(event.pointerId)) return;
+        const maxLeft = Math.max(8, window.innerWidth - this.performanceHud.offsetWidth - 8);
+        const maxTop = Math.max(8, window.innerHeight - this.performanceHud.offsetHeight - 8);
+        const left = Math.min(maxLeft, Math.max(8, event.clientX - dragOffsetX));
+        const top = Math.min(maxTop, Math.max(8, event.clientY - dragOffsetY));
+        this.performanceHud.style.left = `${left}px`;
+        this.performanceHud.style.top = `${top}px`;
+      });
+      const finishDrag = (event) => {
+        if (!header.hasPointerCapture(event.pointerId)) return;
+        header.releasePointerCapture(event.pointerId);
+        this.performanceHud.classList.remove('is-dragging');
+        this.avoidPerformanceHudButtonOverlap();
+      };
+      header.addEventListener('pointerup', finishDrag);
+      header.addEventListener('pointercancel', finishDrag);
+      this.performanceHud.addEventListener('click', (event) => {
+        if (event.target.closest('[data-dev-performance-close]')) this.setPerformanceHudEnabled(false);
+      });
+      document.body.append(this.performanceHud);
+      const reposition = () => window.requestAnimationFrame(() => {
+        if (this.performanceHudMoved) this.clampPerformanceHudToViewport();
+        else this.positionPerformanceHudBelowControls();
+      });
+      window.addEventListener('resize', reposition);
+      window.visualViewport?.addEventListener('resize', reposition);
+      document.getElementById('btn-toggle-hud-menu')?.addEventListener('click', reposition);
+      document.getElementById('btn-toggle-subsolo-menu')?.addEventListener('click', reposition);
+    }
+    this.performanceHud?.classList.toggle('hidden', !this.performanceHudEnabled);
+    if (this.performanceHudEnabled) {
+      this.performanceFrames = [];
+      this.lastPerformanceHudUpdate = 0;
+      this.pageMemoryBytes = null;
+      this.pageMemoryStatus = 'A medir…';
+      this.pageMemoryMeasurePending = false;
+      this.positionPerformanceHudBelowControls();
+    } else {
+      this.performanceFrames = [];
+    }
+  }
+
+  positionPerformanceHudBelowControls() {
+    if (!this.performanceHud || this.performanceHudMoved || !this.performanceHudEnabled) return;
+    const controlSelectors = [
+      '#hud',
+      '#subsolo-hud',
+      '#hud-menu-items.is-open',
+      '#subsolo-hud-menu-items.is-open',
+      '#hud-editor-toolbar:not(.hidden)'
+    ];
+    const controlsBottom = controlSelectors
+      .map((selector) => document.querySelector(selector))
+      .filter((element) => element && element.getClientRects().length > 0)
+      .reduce((bottom, element) => Math.max(bottom, element.getBoundingClientRect().bottom), 0);
+    const gap = 12;
+    const maxTop = Math.max(gap, window.innerHeight - this.performanceHud.offsetHeight - gap);
+    const top = Math.min(controlsBottom + gap, maxTop);
+    this.performanceHud.style.left = 'auto';
+    this.performanceHud.style.right = `${gap}px`;
+    this.performanceHud.style.top = `${top}px`;
+  }
+
+  clampPerformanceHudToViewport() {
+    if (!this.performanceHud || !this.performanceHudEnabled) return;
+    const gap = 8;
+    const maxLeft = Math.max(gap, window.innerWidth - this.performanceHud.offsetWidth - gap);
+    const maxTop = Math.max(gap, window.innerHeight - this.performanceHud.offsetHeight - gap);
+    const rect = this.performanceHud.getBoundingClientRect();
+    this.performanceHud.style.left = `${Math.min(maxLeft, Math.max(gap, rect.left))}px`;
+    this.performanceHud.style.right = 'auto';
+    this.performanceHud.style.top = `${Math.min(maxTop, Math.max(gap, rect.top))}px`;
+    this.avoidPerformanceHudButtonOverlap();
+  }
+
+  avoidPerformanceHudButtonOverlap() {
+    if (!this.performanceHud || !this.performanceHudEnabled) return;
+    const panel = this.performanceHud.getBoundingClientRect();
+    const margin = 8;
+    const gap = 6;
+    const buttons = [...document.querySelectorAll(
+      '#hud button, #subsolo-hud button, #mobile-controls button, .hud-editor-toolbar button'
+    )]
+      .filter((button) => (
+        !this.performanceHud.contains(button)
+        && button.getClientRects().length > 0
+        && getComputedStyle(button).visibility !== 'hidden'
+      ))
+      .map((button) => button.getBoundingClientRect());
+    const candidates = [
+      { left: panel.left, top: panel.top },
+      { left: margin, top: margin },
+      { left: window.innerWidth - panel.width - margin, top: margin },
+      { left: margin, top: window.innerHeight - panel.height - margin },
+      { left: window.innerWidth - panel.width - margin, top: window.innerHeight - panel.height - margin }
+    ];
+    for (const button of buttons) {
+      candidates.push(
+        { left: button.left, top: button.top - panel.height - gap },
+        { left: button.left, top: button.bottom + gap },
+        { left: button.left - panel.width - gap, top: button.top },
+        { left: button.right + gap, top: button.top }
+      );
+    }
+
+    let best = null;
+    for (const candidate of candidates) {
+      const left = Math.min(
+        Math.max(margin, window.innerWidth - panel.width - margin),
+        Math.max(margin, candidate.left)
+      );
+      const top = Math.min(
+        Math.max(margin, window.innerHeight - panel.height - margin),
+        Math.max(margin, candidate.top)
+      );
+      const bounds = {
+        left,
+        top,
+        right: left + panel.width,
+        bottom: top + panel.height
+      };
+      const overlapCount = buttons.filter((button) => (
+        bounds.left < button.right + gap
+        && bounds.right + gap > button.left
+        && bounds.top < button.bottom + gap
+        && bounds.bottom + gap > button.top
+      )).length;
+      const distance = (left - panel.left) ** 2 + (top - panel.top) ** 2;
+      const score = overlapCount * 1e12 + distance;
+      if (!best || score < best.score) best = { left, top, score };
+    }
+
+    if (best) {
+      this.performanceHud.style.left = `${best.left}px`;
+      this.performanceHud.style.right = 'auto';
+      this.performanceHud.style.top = `${best.top}px`;
+    }
+  }
+
+  measurePageMemory(timestamp) {
+    if (this.pageMemoryMeasurePending || timestamp - this.lastPageMemoryMeasureAt < 5000) return;
+    const measure = performance.measureUserAgentSpecificMemory;
+    if (typeof measure !== 'function') {
+      this.pageMemoryStatus = 'N/D';
+      this.lastPageMemoryMeasureAt = timestamp;
+      return;
+    }
+
+    this.lastPageMemoryMeasureAt = timestamp;
+    this.pageMemoryMeasurePending = true;
+    try {
+      Promise.resolve(measure.call(performance))
+        .then(({ bytes }) => {
+          this.pageMemoryBytes = Number.isFinite(bytes) ? bytes : null;
+          this.pageMemoryStatus = this.pageMemoryBytes === null ? 'N/D' : '';
+        })
+        .catch((error) => {
+          this.pageMemoryBytes = null;
+          this.pageMemoryStatus = error?.name === 'SecurityError' ? 'Bloqueada' : 'Indisponível';
+        })
+        .finally(() => {
+          this.pageMemoryMeasurePending = false;
+        });
+    } catch (error) {
+      this.pageMemoryMeasurePending = false;
+      this.pageMemoryStatus = error?.name === 'SecurityError' ? 'Bloqueada' : 'Indisponível';
+    }
+  }
+
+  recordPerformanceFrame(timestamp, updateMs, renderMs, game) {
+    if (!this.isPerformanceHudEnabled() || !this.performanceHud) return;
+    this.performanceFrames.push(timestamp);
+    while (this.performanceFrames.length > 1 && this.performanceFrames[0] < timestamp - 1000) {
+      this.performanceFrames.shift();
+    }
+    this.measurePageMemory(timestamp);
+    if (timestamp - this.lastPerformanceHudUpdate < 250) return;
+    this.lastPerformanceHudUpdate = timestamp;
+    this.positionPerformanceHudBelowControls();
+
+    const firstFrame = this.performanceFrames[0];
+    const frameCount = this.performanceFrames.length;
+    const fps = frameCount > 1 && timestamp > firstFrame
+      ? Math.round((frameCount - 1) * 1000 / (timestamp - firstFrame))
+      : 0;
+    const memoryBytes = performance.memory?.usedJSHeapSize;
+    const deviceMemoryGb = navigator.deviceMemory;
+    const canvas = game.canvas;
+    const values = {
+      '[data-performance-fps]': `${fps} FPS`,
+      '[data-performance-frame]': `${fps ? (1000 / fps).toFixed(1) : '—'} ms`,
+      '[data-performance-update]': `${updateMs.toFixed(1)} ms`,
+      '[data-performance-render]': `${renderMs.toFixed(1)} ms`,
+      '[data-performance-memory]': Number.isFinite(memoryBytes)
+        ? `${(memoryBytes / 1048576).toFixed(0)} MB`
+        : 'N/D',
+      '[data-performance-page-memory]': Number.isFinite(this.pageMemoryBytes)
+        ? `${(this.pageMemoryBytes / 1048576).toFixed(0)} MB`
+        : this.pageMemoryStatus,
+      '[data-performance-device-memory]': Number.isFinite(deviceMemoryGb)
+        ? `~${deviceMemoryGb} GB`
+        : 'N/D',
+      '[data-performance-dom]': document.getElementsByTagName('*').length.toLocaleString(),
+      '[data-performance-canvas]': `${canvas.width} × ${canvas.height} · DPR ${(canvas.width / Math.max(1, canvas.clientWidth)).toFixed(2)} · ${this.state.settings.graphicsQuality}`
+    };
+    for (const [selector, value] of Object.entries(values)) {
+      const element = this.performanceHud.querySelector(selector);
+      if (element) element.textContent = value;
+    }
   }
 
   createNumberField(labelText, attribute, key, max = MAX_DEBUG_VALUE) {

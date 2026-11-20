@@ -1,6 +1,6 @@
 {
   "name": "floristever",
-  "version": "2.5.2",
+  "version": "2.6.0",
   "description": "FloristEver - jogo cozy de floricultura para web, Android e Windows.",
   "private": true,
   "main": "electron/main.js",

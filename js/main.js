@@ -49,7 +49,12 @@ import { SecretCustomerManager } from './subsolo/secret-customer-manager.js';
 const MOBILE_CONTROL_LAYOUTS = new Set(['left', 'right']);
 const MOBILE_CONTROL_SIZES = new Set(['small', 'standard', 'large']);
 const MOBILE_CONTROL_SIZE_SCALE = { small: 0.8, standard: 1, large: 1.2 };
+const GRAPHICS_QUALITIES = new Set(['low', 'normal', 'ultra']);
 const GREENHOUSE_UNDER_CONSTRUCTION = true;
+
+const ROAD_DISTANCE = 20;
+const ROAD_CORNER_RADIUS = 72;
+const CORRIDOR_OVERLAP = 8;
 
 function appendTermsInlineContent(parent, text) {
   const markdownPattern = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
@@ -186,6 +191,9 @@ class Game {
     this.cachedPathPlots = null;
     this.cachedPathPlotCount = -1;
     this.cachedPathSegments = null;
+    this.cachedPathsCanvas = null;
+    this.cachedPathsKey = null;
+    this.cachedPathsBounds = null;
     this.cachedLongTermProjects = this.state.getLongTermProjects();
     this.cachedTreePlotSource = null;
     this.cachedTreePlotCount = -1;
@@ -264,7 +272,13 @@ class Game {
     // Tempo e ciclo dia/noite muito suave
     this.gameTime = 0;
     this.challengeRefreshTimer = 0;
+    this.projectRefreshTimer = 0;
+    this.indicatorRefreshTimer = 0;
+    this.lastMinimapDrawAt = 0;
     this.lastFrameTime = performance.now();
+    this.lastAnimationFrameTime = this.lastFrameTime;
+    this.renderAccumulatorMs = 0;
+    this.simulationAccumulator = 0;
     this.audioUnlocked = false;
     this.stockCapacityNoticeShown = false;
 
@@ -291,6 +305,17 @@ class Game {
     // Carregar progresso guardado
     const loadResult = state.load();
     this.hasLoadedProgress = loadResult !== null;
+    state.subscribe((event) => {
+      if ([
+        'state_loaded',
+        'plot_unlocked',
+        'optional_plot_purchased',
+        'upgrade_bought',
+        'garden_decoration_moved'
+      ].includes(event)) {
+        this.collisionObstacles = null;
+      }
+    });
     if (this.sessionTestMode) {
       applyLocalFullTestProfile(state);
       this.hud.showToast(
@@ -348,6 +373,7 @@ class Game {
     this.setupCompostModal();
     this.setupAudioVisibility();
     this.setupSettingsModal();
+    this.setupGraphicsQuality();
     this.setupThemesModal();
     this.setupStartMenu();
     this.setupConnectionStatus();
@@ -360,7 +386,13 @@ class Game {
   handleResize() {
     const width = document.documentElement.clientWidth || window.innerWidth;
     const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    const pixelRatio = getCanvasPixelRatio(width, height, window.devicePixelRatio);
+    const maxPixelRatio = state.settings.graphicsQuality === 'low'
+      ? 1.0
+      : state.settings.graphicsQuality === 'normal'
+      ? 1.25
+      : 2.0;
+    const requestedRatio = Math.min(window.devicePixelRatio || 1, maxPixelRatio);
+    const pixelRatio = getCanvasPixelRatio(width, height, requestedRatio);
     const pixelWidth = Math.round(width * pixelRatio);
     const pixelHeight = Math.round(height * pixelRatio);
     this.canvas.width = pixelWidth;
@@ -369,7 +401,7 @@ class Game {
     this.canvas.style.height = `${height}px`;
     this.ctx.setTransform(pixelWidth / width, 0, 0, pixelHeight / height, 0, 0);
     this.ctx.imageSmoothingEnabled = true;
-    this.ctx.imageSmoothingQuality = 'high';
+    this.ctx.imageSmoothingQuality = state.settings.graphicsQuality === 'low' ? 'medium' : 'high';
 
     this.camera.zoom = Math.max(0.68, Math.min(1, width / 768, height / 640));
     this.applyMobileControlSettings();
@@ -459,6 +491,10 @@ class Game {
       if (this.gameTutorial?.isOpen()) return;
       if (this.subsoloUI?.tutorial?.isOpen()) return;
       if (this.cinematicManager?.isPlaying) {
+        if (
+          this.cinematicManager.overlay?.contains(e.target)
+          && e.target instanceof HTMLButtonElement
+        ) return;
         e.preventDefault();
         return;
       }
@@ -474,6 +510,10 @@ class Game {
 
     window.addEventListener('keyup', (e) => {
       if (this.cinematicManager?.isPlaying) {
+        if (
+          this.cinematicManager.overlay?.contains(e.target)
+          && e.target instanceof HTMLButtonElement
+        ) return;
         e.preventDefault();
         return;
       }
@@ -667,7 +707,7 @@ class Game {
       mapToggle.setAttribute('aria-expanded', String(isOpen));
       mapToggle.setAttribute('aria-label', isOpen ? 'Fechar mapa' : 'Abrir mapa');
       if (isOpen) {
-        this.drawMinimap();
+        this.drawMinimap(true);
         this.renderMapZoneDestinations();
       }
     };
@@ -1400,6 +1440,31 @@ class Game {
     refreshSubsoloSettings();
   }
 
+  setupGraphicsQuality() {
+    const inputs = [...document.querySelectorAll('input[name="graphics-quality"]')];
+    const apply = (quality) => {
+      const normalized = GRAPHICS_QUALITIES.has(quality) ? quality : 'normal';
+      state.settings.graphicsQuality = normalized;
+      document.documentElement.dataset.graphicsQuality = normalized;
+      inputs.forEach((input) => {
+        input.checked = input.value === normalized;
+        input.closest('.theme-option')?.classList.toggle('is-selected', input.checked);
+      });
+      this.handleResize();
+    };
+
+    apply(state.settings.graphicsQuality);
+    inputs.forEach((input) => input.addEventListener('change', () => {
+      if (!input.checked || !GRAPHICS_QUALITIES.has(input.value)) return;
+      apply(input.value);
+      state.save();
+    }));
+    this.refreshGraphicsQuality = () => apply(state.settings.graphicsQuality);
+    state.subscribe((event) => {
+      if (event === 'state_loaded') this.refreshGraphicsQuality();
+    });
+  }
+
   setupThemesModal() {
     const eventPill = document.getElementById('theme-event-pill');
     const reducedEffects = document.getElementById('theme-reduced-effects');
@@ -1908,19 +1973,50 @@ class Game {
 
   // Loop Principal com Delta Time
   gameLoop(timestamp) {
+    const animationDeltaMs = Math.max(0, timestamp - this.lastAnimationFrameTime);
+    this.lastAnimationFrameTime = timestamp;
+    this.renderAccumulatorMs += animationDeltaMs;
+    const targetFrameMs = 1000 / 120;
+    if (this.renderAccumulatorMs < targetFrameMs) {
+      requestAnimationFrame((t) => this.gameLoop(t));
+      return;
+    }
+    this.renderAccumulatorMs %= targetFrameMs;
+
     let dt = (timestamp - this.lastFrameTime) / 1000;
     this.lastFrameTime = timestamp;
 
     // Clamp para evitar saltos enormes quando o utilizador muda de separador
     if (dt > 0.1) dt = 0.1;
 
-    if (
+    const monitorPerformance = this.developerTools?.isPerformanceHudEnabled();
+    const frameWorkStart = monitorPerformance ? performance.now() : 0;
+    const canSimulate =
       !this.cinematicManager?.isPlaying
       && !this.gameTutorial?.isOpen()
       && !this.subsoloUI?.tutorial?.isOpen()
-      && !this.hudCustomizer?.draft
-    ) this.update(dt);
+      && !this.hudCustomizer?.draft;
+    if (canSimulate) {
+      const fixedStep = 1 / 60;
+      this.simulationAccumulator = Math.min(this.simulationAccumulator + dt, 0.1);
+      while (this.simulationAccumulator >= fixedStep) {
+        this.update(fixedStep);
+        this.simulationAccumulator -= fixedStep;
+      }
+    } else {
+      this.simulationAccumulator = 0;
+    }
+    const renderStart = monitorPerformance ? performance.now() : 0;
     this.render();
+    if (monitorPerformance) {
+      const renderEnd = performance.now();
+      this.developerTools.recordPerformanceFrame(
+        timestamp,
+        renderStart - frameWorkStart,
+        renderEnd - renderStart,
+        this
+      );
+    }
 
     requestAnimationFrame((t) => this.gameLoop(t));
   }
@@ -1990,12 +2086,16 @@ class Game {
     }
     state.processPayroll();
     const fieldBounds = this.fieldManager.getMapAreaBounds();
-    this.cachedLongTermProjects = this.state.getLongTermProjects();
-    const greenhouse = this.cachedLongTermProjects
-      .find((project) => project.zone.id === 'greenhouse')?.zone;
-    this.mapBounds.minX = greenhouse ? Math.min(40, greenhouse.x - 340) : 40;
-    this.mapBounds.maxX = Math.max(2800, fieldBounds.right + 80);
-    this.mapBounds.maxY = Math.max(1200, fieldBounds.bottom + 80);
+    this.projectRefreshTimer += dt;
+    if (this.projectRefreshTimer >= 0.5) {
+      this.projectRefreshTimer %= 0.5;
+      this.cachedLongTermProjects = this.state.getLongTermProjects();
+      const greenhouse = this.cachedLongTermProjects
+        .find((project) => project.zone.id === 'greenhouse')?.zone;
+      this.mapBounds.minX = greenhouse ? Math.min(40, greenhouse.x - 340) : 40;
+      this.mapBounds.maxX = Math.max(2800, fieldBounds.right + 80);
+      this.mapBounds.maxY = Math.max(1200, fieldBounds.bottom + 80);
+    }
 
     // Atualização de teclado para movimento do jogador
     const compostModalOpen = this.compostModal && !this.compostModal.classList.contains('hidden');
@@ -2073,21 +2173,34 @@ class Game {
     this.workerManager.update(dt, this.fieldManager);
     this.bouquetWorkerManager.update(dt);
     this.customerManager.update(dt);
-    const readyFlowers = state.plots.reduce((total, plot) => {
-      if (!plot.unlocked) return total;
-      return total + plot.flowers.filter((flower) => flower?.progress >= 1).length;
-    }, 0);
-    const waitingCustomers = this.customerManager.customers.filter((customer) => customer.state === 'waiting');
-    const missingStockOrders = waitingCustomers.filter((customer) => {
-      const requestedCounts = customer.requestedFlowers.reduce((counts, flowerId) => {
-        counts[flowerId] = (counts[flowerId] || 0) + 1;
-        return counts;
-      }, {});
-      return Object.entries(requestedCounts).some(([flowerId, amount]) => {
-        return (state.stock[flowerId] || 0) < amount;
-      });
-    });
-    this.hud.updateWorldIndicators(readyFlowers, waitingCustomers.length, missingStockOrders.length);
+    this.indicatorRefreshTimer += dt;
+    if (this.indicatorRefreshTimer >= 0.4) {
+      this.indicatorRefreshTimer %= 0.4;
+      let readyFlowers = 0;
+      for (const plot of state.plots) {
+        if (!plot.unlocked) continue;
+        for (const flower of plot.flowers) {
+          if (flower?.progress >= 1) readyFlowers++;
+        }
+      }
+      let waitingCustomers = 0;
+      let missingStockOrders = 0;
+      for (const customer of this.customerManager.customers) {
+        if (customer.state !== 'waiting') continue;
+        waitingCustomers++;
+        const requestedCounts = Object.create(null);
+        for (const flowerId of customer.requestedFlowers) {
+          requestedCounts[flowerId] = (requestedCounts[flowerId] || 0) + 1;
+        }
+        for (const [flowerId, amount] of Object.entries(requestedCounts)) {
+          if ((state.stock[flowerId] || 0) < amount) {
+            missingStockOrders++;
+            break;
+          }
+        }
+      }
+      this.hud.updateWorldIndicators(readyFlowers, waitingCustomers, missingStockOrders);
+    }
     this.particles.update(dt);
 
     // Atualiza borboletas e abelhas de ambientação
@@ -2142,6 +2255,7 @@ class Game {
       this.ctx.translate(-this.camera.x, -this.camera.y);
       this.subsoloRenderer?.render(this.ctx, visibleBounds);
       this.ctx.restore();
+      if (state.settings.graphicsQuality === 'ultra') this.renderUltraLighting(viewW, viewH, true);
       this.sceneManager.drawTransitionOverlay(this.ctx, viewW, viewH);
       return;
     }
@@ -2272,6 +2386,7 @@ class Game {
     for (const tree of this.trees) {
       if (!this.isWorldRectVisible(tree.x - 52, tree.y - 52, tree.x + 52, tree.y + 52)) continue;
       if (this.treesOverlappingPlots.has(tree)) continue;
+      if (state.settings.graphicsQuality === 'ultra') this.renderTreeShadow(tree.x, tree.y);
       assetManager.drawTree(this.ctx, tree.x, tree.y, this.gameTime, themeManager.getTreePalette(tree.x, tree.y));
     }
 
@@ -2295,6 +2410,9 @@ class Game {
       ? getDayNightLighting(this.gameTime)
       : null;
     themeManager.drawLayer(this.ctx, 'drawAtmosphere', viewW, viewH, dayNightLighting);
+    if (state.settings.graphicsQuality === 'ultra') {
+      this.renderUltraLighting(viewW, viewH, false, dayNightLighting);
+    }
 
     // 10. Ciclo completo de dia, pôr do sol, noite e alvorada em todos os temas.
     if (dayNightLighting) this.renderDayNightOverlay(viewW, viewH, dayNightLighting);
@@ -2305,10 +2423,68 @@ class Game {
     this.drawMinimap();
   }
 
-  drawMinimap() {
+  renderTreeShadow(x, y) {
+    const ctx = this.ctx;
+    const phase = (this.gameTime / 360) % 1;
+    const night = state.settings.dayNightCycle ? getDayNightLighting(this.gameTime).night : 0;
+    const offsetX = Math.cos(phase * Math.PI * 2) * 18;
+    const shadowX = x - offsetX;
+    const shadowY = y + 32 + Math.sin(phase * Math.PI * 2) * 7;
+    const shadow = ctx.createRadialGradient(shadowX, shadowY, 4, shadowX, shadowY, 64);
+    shadow.addColorStop(0, `rgba(32, 43, 30, ${0.22 * (1 - night * 0.82)})`);
+    shadow.addColorStop(0.55, `rgba(32, 43, 30, ${0.11 * (1 - night * 0.82)})`);
+    shadow.addColorStop(1, 'rgba(32, 43, 30, 0)');
+    ctx.fillStyle = shadow;
+    ctx.beginPath();
+    ctx.ellipse(shadowX, shadowY, 54, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  renderUltraLighting(width, height, underground = false, lighting = null) {
+    const ctx = this.ctx;
+    ctx.save();
+    const night = lighting?.night || 0;
+    const warmShift = Math.max(lighting?.sunset || 0, lighting?.dawn || 0);
+    const glow = ctx.createRadialGradient(
+      width * 0.22, height * 0.12, 0,
+      width * 0.22, height * 0.12, Math.max(width, height) * 0.88
+    );
+    const warmAlpha = 0.11 + warmShift * 0.1 - night * 0.055;
+    glow.addColorStop(0, underground ? 'rgba(125, 174, 198, 0.10)' : `rgba(255, 222, 157, ${warmAlpha})`);
+    glow.addColorStop(0.55, underground ? 'rgba(93, 130, 158, 0.035)' : `rgba(255, 234, 194, ${warmAlpha * 0.26})`);
+    glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, width, height);
+
+    if (!underground && night > 0.05) {
+      const moonlight = ctx.createRadialGradient(
+        width * 0.82, height * 0.18, 0,
+        width * 0.82, height * 0.18, Math.max(width, height) * 0.75
+      );
+      moonlight.addColorStop(0, `rgba(140, 176, 220, ${night * 0.10})`);
+      moonlight.addColorStop(1, 'rgba(140, 176, 220, 0)');
+      ctx.fillStyle = moonlight;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    const vignette = ctx.createRadialGradient(
+      width / 2, height / 2, Math.min(width, height) * 0.28,
+      width / 2, height / 2, Math.max(width, height) * 0.72
+    );
+    vignette.addColorStop(0, 'rgba(20, 31, 24, 0)');
+    vignette.addColorStop(1, underground ? 'rgba(5, 12, 20, 0.16)' : 'rgba(37, 48, 33, 0.12)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+  }
+
+  drawMinimap(force = false) {
     const canvas = document.getElementById('minimap-canvas');
     const panel = document.getElementById('map-panel');
     if (!canvas || !panel || panel.classList.contains('hidden')) return;
+    const now = performance.now();
+    if (!force && now - this.lastMinimapDrawAt < 50) return;
+    this.lastMinimapDrawAt = now;
 
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
@@ -2543,12 +2719,15 @@ class Game {
     const maxY = Math.max(this.mapBounds.maxY, fieldBounds.bottom);
 
     // Variações de relva subtis para quebrar o fundo sem competir com os canteiros.
-    const firstPatchX = 130 + Math.max(0, Math.ceil((visible.left - 125 - 130) / 245)) * 245;
-    const firstPatchY = 125 + Math.max(0, Math.ceil((visible.top - 125 - 125) / 215)) * 215;
+    const detailStep = state.settings.graphicsQuality === 'low' ? 1.8 : 1;
+    const patchStepX = 245 * detailStep;
+    const patchStepY = 215 * detailStep;
+    const firstPatchX = 130 + Math.max(0, Math.ceil((visible.left - 125 - 130) / patchStepX)) * patchStepX;
+    const firstPatchY = 125 + Math.max(0, Math.ceil((visible.top - 125 - 125) / patchStepY)) * patchStepY;
     const lastPatchX = Math.min(maxX, visible.right + 125);
     const lastPatchY = Math.min(maxY, visible.bottom + 125);
-    for (let x = firstPatchX; x < lastPatchX; x += 245) {
-      for (let y = firstPatchY; y < lastPatchY; y += 215) {
+    for (let x = firstPatchX; x < lastPatchX; x += patchStepX) {
+      for (let y = firstPatchY; y < lastPatchY; y += patchStepY) {
         const offsetX = (x * 7 + y * 3) % 72;
         const offsetY = (y * 5 + x * 2) % 58;
         this.ctx.beginPath();
@@ -2567,12 +2746,14 @@ class Game {
 
     // Pequenas tufas de relva distribuídas também pelas expansões.
     this.ctx.fillStyle = palette.terrainTuft || 'rgba(47, 93, 74, 0.32)';
-    const firstTuftX = 120 + Math.max(0, Math.ceil((visible.left - 60 - 120) / 140)) * 140;
-    const firstTuftY = 100 + Math.max(0, Math.ceil((visible.top - 60 - 100) / 120)) * 120;
+    const tuftStepX = 140 * detailStep;
+    const tuftStepY = 120 * detailStep;
+    const firstTuftX = 120 + Math.max(0, Math.ceil((visible.left - 60 - 120) / tuftStepX)) * tuftStepX;
+    const firstTuftY = 100 + Math.max(0, Math.ceil((visible.top - 60 - 100) / tuftStepY)) * tuftStepY;
     const lastTuftX = Math.min(maxX, visible.right + 60);
     const lastTuftY = Math.min(maxY, visible.bottom + 60);
-    for (let x = firstTuftX; x < lastTuftX; x += 140) {
-      for (let y = firstTuftY; y < lastTuftY; y += 120) {
+    for (let x = firstTuftX; x < lastTuftX; x += tuftStepX) {
+      for (let y = firstTuftY; y < lastTuftY; y += tuftStepY) {
         const ox = (x * 7) % 50;
         const oy = (y * 5) % 40;
         this.ctx.beginPath();
@@ -2583,91 +2764,189 @@ class Game {
     }
   }
 
+  getRoadLayout() {
+    const fm = this.fieldManager;
+    const { maxGridX, maxGridY } = fm.getGridBounds();
+    const stepX = fm.plotWidth + fm.gapX;
+    const stepY = fm.plotHeight + fm.gapY;
+    const fieldRight = fm.originX + maxGridX * stepX + fm.plotWidth;
+    const fieldBottom = fm.originY + maxGridY * stepY + fm.plotHeight;
+
+    const distance = Math.max(ROAD_DISTANCE, Math.max(fm.gapX, fm.gapY) / 2 + 6);
+    const left = fm.originX - distance;
+    const right = fieldRight + distance;
+    const bottom = fieldBottom + distance;
+
+    // Raio máximo que cabe na geometria (campos pequenos não deixam curvas enormes)
+    const radius = Math.max(
+      8,
+      Math.min(ROAD_CORNER_RADIUS, (right - left) / 2, (bottom - 218) / 2, (bottom - 420) / 2)
+    );
+    const exitY = Math.min(420, bottom - 2 * radius);
+
+    // Canto superior esquerdo: reduz o raio até o canto do 1.º canteiro ficar dentro da estrada
+    let topLeftRadius = Math.min(radius, (bottom - 218) / 2);
+    while (
+      topLeftRadius > 20
+      && Math.hypot(distance + topLeftRadius, fm.originY - 218 - topLeftRadius) > topLeftRadius + 26
+    ) {
+      topLeftRadius -= 2;
+    }
+
+    return { fieldRight, fieldBottom, stepX, stepY, left, right, bottom, radius, topLeftRadius, exitY };
+  }
+
   renderPaths() {
     const ctx = this.ctx;
-    const { maxGridX, maxGridY } = this.fieldManager.getGridBounds();
-    const stepX = this.fieldManager.plotWidth + this.fieldManager.gapX;
-    const stepY = this.fieldManager.plotHeight + this.fieldManager.gapY;
-    const fieldRight = this.fieldManager.originX + maxGridX * stepX + this.fieldManager.plotWidth;
-    const fieldBottom = this.fieldManager.originY + maxGridY * stepY + this.fieldManager.plotHeight;
-    const roadLeftX = this.fieldManager.originX - 50;
-    const roadRightX = fieldRight + 24;
-    const roadBottomY = fieldBottom + 24;
-    const visible = this.visibleWorldBounds;
+    const fm = this.fieldManager;
+    const palette = themeManager.palette;
+    const reduced = themeManager.effectsReduced;
+    const layout = this.getRoadLayout();
     const greenhouse = this.cachedLongTermProjects
       .find((project) => project.zone.id === 'greenhouse')?.zone;
 
-    const mainPath = new Path2D();
-    mainPath.moveTo(0, 218);
-    mainPath.lineTo(roadLeftX, 218);
-    mainPath.lineTo(roadLeftX, roadBottomY);
-    mainPath.lineTo(roadRightX, roadBottomY);
-    mainPath.lineTo(roadRightX, 444);
-    mainPath.quadraticCurveTo(roadRightX, 420, roadRightX + 24, 420);
-    if (greenhouse) {
-      mainPath.moveTo(roadLeftX, 218);
-      mainPath.bezierCurveTo(150, 235, 0, 300, -180, 320);
-      mainPath.bezierCurveTo(-420, 345, -540, 280, -690, 365);
-      mainPath.bezierCurveTo(-650, 410, -650, 480, -690, 520);
-      mainPath.bezierCurveTo(-690, 590, -780, 650, -900, 650);
-      mainPath.bezierCurveTo(-900, 640, -900, 600, greenhouse.x, greenhouse.y + 125);
+    // Chave única para invalidar o offscreen canvas quando caminhos, canteiros ou temas mudarem
+    const pathsKey = [
+      layout.left, layout.right, layout.bottom, layout.radius, layout.topLeftRadius, layout.exitY,
+      greenhouse ? `${greenhouse.x},${greenhouse.y}` : '-',
+      this.state.plots.length,
+      palette.pathEarth || '#986947',
+      palette.pathSoil || '#BF9462',
+      palette.pathSurface || '#D7BF8B',
+      reduced ? 'red' : 'full'
+    ].join('|');
+
+    if (this.cachedPathsCanvas && this.cachedPathsKey === pathsKey) {
+      const b = this.cachedPathsBounds;
+      if (this.isWorldRectVisible(b.minX, b.minY, b.maxX, b.maxY)) {
+        ctx.drawImage(this.cachedPathsCanvas, b.minX, b.minY);
+      }
+      return;
     }
 
+    // ── Segmentos do jardim (atualiza lista se mudaram as parcelas) ──
     if (this.cachedPathPlots !== this.state.plots || this.cachedPathPlotCount !== this.state.plots.length) {
       this.cachedPathSegments = getGardenPathSegments(this.state.plots, {
-        originX: this.fieldManager.originX,
-        originY: this.fieldManager.originY,
-        plotWidth: this.fieldManager.plotWidth,
-        plotHeight: this.fieldManager.plotHeight,
-        gapX: this.fieldManager.gapX,
-        gapY: this.fieldManager.gapY,
-        leftExtent: roadLeftX,
-        rightExtent: fieldRight
+        originX: fm.originX,
+        originY: fm.originY,
+        plotWidth: fm.plotWidth,
+        plotHeight: fm.plotHeight,
+        gapX: fm.gapX,
+        gapY: fm.gapY,
+        leftExtent: layout.left,
+        rightExtent: layout.right
       });
       this.cachedPathPlots = this.state.plots;
       this.cachedPathPlotCount = this.state.plots.length;
     }
-    const gardenPath = new Path2D();
-    for (const paths of [this.cachedPathSegments.vertical, this.cachedPathSegments.horizontal]) {
-      for (const path of paths) {
-        if (
-          path.x + path.width < visible.left - stepX
-          || path.x > visible.right + stepX
-          || path.y + path.height < visible.top - this.fieldManager.plotHeight
-          || path.y > visible.bottom + this.fieldManager.plotHeight
-        ) continue;
-        if (path.width < path.height) {
-          gardenPath.moveTo(path.x + path.width / 2, path.y);
-          gardenPath.lineTo(path.x + path.width / 2, path.y + path.height);
-        } else {
-          gardenPath.moveTo(path.x, path.y + path.height / 2);
-          gardenPath.lineTo(path.x + path.width, path.y + path.height / 2);
-        }
-      }
+
+    // Calcular limites geométricos de todos os caminhos
+    const fieldBounds = fm.getMapAreaBounds();
+    const minX = Math.min(-1000, layout.left - 100, greenhouse ? greenhouse.x - 100 : 0, fieldBounds.left - 50);
+    const maxX = Math.max(this.mapBounds.maxX + 100, layout.right + 200, fieldBounds.right + 100);
+    const minY = Math.min(-50, fm.originY - 50, layout.bottom - 150);
+    const maxY = Math.max(this.mapBounds.maxY + 100, layout.bottom + 150, fieldBounds.bottom + 100);
+    const width = Math.ceil(maxX - minX);
+    const height = Math.ceil(maxY - minY);
+
+    if (width <= 0 || height <= 0) return;
+
+    const offscreen = document.createElement('canvas');
+    offscreen.width = width;
+    offscreen.height = height;
+    const offCtx = offscreen.getContext('2d');
+    if (!offCtx) return;
+
+    offCtx.translate(-minX, -minY);
+
+    // ── Estrada principal ──
+    const road = new Path2D();
+    road.moveTo(0, 218);
+    road.arcTo(layout.left, 218, layout.left, layout.bottom, layout.topLeftRadius);
+    road.arcTo(layout.left, layout.bottom, layout.right, layout.bottom, layout.radius);
+    road.arcTo(layout.right, layout.bottom, layout.right, layout.exitY, layout.radius);
+    road.arcTo(layout.right, layout.exitY, layout.right + layout.radius, layout.exitY, layout.radius);
+    road.lineTo(layout.right + layout.radius + 24, layout.exitY);
+    if (greenhouse) {
+      road.moveTo(layout.left - layout.topLeftRadius, 218);
+      road.bezierCurveTo(150, 235, 0, 300, -180, 320);
+      road.bezierCurveTo(-420, 345, -540, 280, -690, 365);
+      road.bezierCurveTo(-650, 410, -650, 480, -690, 520);
+      road.bezierCurveTo(-690, 590, -780, 650, -900, 650);
+      road.bezierCurveTo(-900, 640, -900, 600, greenhouse.x, greenhouse.y + 125);
     }
 
-    ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    const palette = themeManager.palette;
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = palette.pathEarth || '#986947';
-    ctx.lineWidth = 58;
-    ctx.stroke(mainPath);
-    ctx.lineWidth = 36;
-    ctx.stroke(gardenPath);
-    ctx.strokeStyle = palette.pathSoil || '#BF9462';
-    ctx.lineWidth = 50;
-    ctx.stroke(mainPath);
-    ctx.lineWidth = 34;
-    ctx.stroke(gardenPath);
-    ctx.strokeStyle = palette.pathSurface || '#D7BF8B';
-    ctx.lineWidth = 42;
-    ctx.stroke(mainPath);
-    ctx.lineWidth = 32;
-    ctx.stroke(gardenPath);
+    // Corredores verticais e horizontais completos
+    const gardenV = new Path2D();
+    const gardenH = new Path2D();
+    for (const path of this.cachedPathSegments.vertical) {
+      const centerX = path.x + path.width / 2;
+      gardenV.moveTo(centerX, Math.max(path.y, fm.originY + CORRIDOR_OVERLAP));
+      gardenV.lineTo(centerX, path.y + path.height);
+    }
+    for (const path of this.cachedPathSegments.horizontal) {
+      const centerY = path.y + path.height / 2;
+      gardenH.moveTo(path.x, centerY);
+      gardenH.lineTo(path.x + path.width, centerY);
+    }
 
-    ctx.restore();
+    const earth = palette.pathEarth || '#986947';
+    const soil = palette.pathSoil || '#BF9462';
+    const surface = palette.pathSurface || '#D7BF8B';
+
+    const widthV = fm.gapX + 2 * CORRIDOR_OVERLAP;
+    const widthH = fm.gapY + 2 * CORRIDOR_OVERLAP;
+
+    const layer = (color, roadWidth, delta, alpha = 1) => {
+      offCtx.globalAlpha = alpha;
+      offCtx.strokeStyle = color;
+      offCtx.lineWidth = roadWidth;
+      offCtx.stroke(road);
+      offCtx.lineWidth = Math.max(6, widthV + delta);
+      offCtx.stroke(gardenV);
+      offCtx.lineWidth = Math.max(6, widthH + delta);
+      offCtx.stroke(gardenH);
+    };
+
+    const specks = (color, strokeW, off, offset, alpha) => {
+      offCtx.globalAlpha = alpha;
+      offCtx.strokeStyle = color;
+      offCtx.setLineDash([0.1, off]);
+      offCtx.lineDashOffset = offset;
+      offCtx.lineWidth = strokeW;
+      offCtx.stroke(road);
+      offCtx.stroke(gardenV);
+      offCtx.stroke(gardenH);
+      offCtx.setLineDash([]);
+      offCtx.lineDashOffset = 0;
+    };
+
+    offCtx.save();
+    offCtx.lineCap = 'round';
+    offCtx.lineJoin = 'round';
+
+    layer(soil, 66, 6, 0.22);
+    layer(soil, 58, 2, 0.5);
+    layer(soil, 52, 0);
+    layer(surface, 42, -8);
+    layer('rgba(255, 255, 255, 0.12)', 28, -26);
+
+    if (!reduced) {
+      specks(earth, 3.4, 17, 0, 0.45);
+      specks(earth, 2.6, 29, 9, 0.4);
+      specks('#FFFFFF', 3, 23, 14, 0.4);
+    }
+
+    offCtx.globalAlpha = 1;
+    offCtx.restore();
+
+    this.cachedPathsCanvas = offscreen;
+    this.cachedPathsBounds = { minX, minY, maxX, maxY };
+    this.cachedPathsKey = pathsKey;
+
+    if (this.isWorldRectVisible(minX, minY, maxX, maxY)) {
+      ctx.drawImage(offscreen, minX, minY);
+    }
   }
 
   renderGreenhouseVegetation() {
@@ -2858,19 +3137,11 @@ class Game {
   getPlayerCollisionObstacles() {
     const plots = this.state.plots;
     const shopExpansion = this.state.upgrades.shopExpansion || 0;
-    const decorSignature = this.mapDecor.map(({ type, x, y, count, spacing }) => (
-      `${type}:${x}:${y}:${count || 0}:${spacing || 0}`
-    )).join('|');
-    const plotAccessSignature = plots
-      .map((plot) => `${plot.gridX},${plot.gridY}:${plot.unlocked ? 'open' : 'locked'}`)
-      .join('|');
     if (
       this.collisionObstacles
       && this.collisionPlots === plots
       && this.collisionPlotCount === plots.length
-      && this.collisionPlotAccessSignature === plotAccessSignature
       && this.collisionShopExpansion === shopExpansion
-      && this.collisionDecorSignature === decorSignature
     ) {
       return this.collisionObstacles;
     }
@@ -2963,9 +3234,7 @@ class Game {
     this.collisionObstacles = { objects: collidableObjects, plotsByGrid };
     this.collisionPlots = plots;
     this.collisionPlotCount = plots.length;
-    this.collisionPlotAccessSignature = plotAccessSignature;
     this.collisionShopExpansion = shopExpansion;
-    this.collisionDecorSignature = decorSignature;
     return this.collisionObstacles;
   }
 
@@ -3531,6 +3800,7 @@ class Game {
   }
 
   renderZoneFindings() {
+    if (GREENHOUSE_UNDER_CONSTRUCTION) return;
     const ctx = this.ctx;
     for (const zone of this.state.getZoneActivities()) {
       if (zone.id !== 'greenhouse') continue;

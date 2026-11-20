@@ -3,15 +3,19 @@ import { PALETTE } from './utils.js';
 import { HALLOWEEN_THEME } from './themes/halloween.js';
 import { LUMINOUS_GARDEN_THEME } from './themes/luminous-garden.js';
 import { HEARTS_GARDEN_THEME } from './themes/hearts-garden.js';
+import { GOLDEN_AUTUMN_THEME } from './themes/theme-outono-dourado.js';
+import { COLOR_FESTIVAL_THEME } from './themes/theme-festival-das-cores.js';
 
 export const EVENT_THEMES_ENABLED = true;
 export const PERMANENT_THEMES_ENABLED = true;
 export const LUMINOUS_GARDEN_UNLOCK_LEVEL = LUMINOUS_GARDEN_THEME.unlockLevel;
-export const THEME_PREFERENCES = Object.freeze(['auto', 'halloween', 'luminous', 'jardim_coracoes', 'classic']);
+export const THEME_PREFERENCES = Object.freeze(['auto', 'halloween', 'luminous', 'jardim_coracoes', 'outono_dourado', 'festival_cores', 'classic']);
 const THEMES_BY_PREFERENCE = new Map([
   ['halloween', HALLOWEEN_THEME],
   ['luminous', LUMINOUS_GARDEN_THEME],
-  ['jardim_coracoes', HEARTS_GARDEN_THEME]
+  ['jardim_coracoes', HEARTS_GARDEN_THEME],
+  ['outono_dourado', GOLDEN_AUTUMN_THEME],
+  ['festival_cores', COLOR_FESTIVAL_THEME]
 ]);
 const THEMES_BY_ID = new Map([...THEMES_BY_PREFERENCE.values()].map((theme) => [theme.id, theme]));
 
@@ -64,7 +68,7 @@ export function resolveThemeId(
   if (!eventThemesEnabled) return 'classic';
   if (preference !== 'auto') return 'classic';
 
-  const eventThemes = [HEARTS_GARDEN_THEME, HALLOWEEN_THEME];
+  const eventThemes = [HALLOWEEN_THEME, GOLDEN_AUTUMN_THEME, HEARTS_GARDEN_THEME, COLOR_FESTIVAL_THEME];
   return eventThemes.find((theme) => (
     (theme.type !== 'permanent' || permanentThemesEnabled)
     && isWithinRecurringWindow(date, theme.recurringWindow)
@@ -139,7 +143,8 @@ export class ThemeManager {
   }
 
   get effectsReduced() {
-    return this.reducedEffects || this.performanceFallback;
+    return this.reducedEffects || this.performanceFallback
+      || this.state.settings?.graphicsQuality === 'low';
   }
 
   setPerformanceFallback(enabled) {
@@ -165,7 +170,7 @@ export class ThemeManager {
 
   beginFrame(now = performance.now()) {
     this.activeHalosThisFrame = 0;
-    if (this.activeTheme?.type !== 'permanent' || this.reducedEffects) {
+    if (this.reducedEffects) {
       this.lastFrameAt = now;
       this.lowFrameSince = null;
       this.stableFrameSince = null;
@@ -174,11 +179,11 @@ export class ThemeManager {
     }
     if (this.lastFrameAt !== null) {
       const frameDuration = now - this.lastFrameAt;
-      if (frameDuration <= 250 && frameDuration >= 34) {
+      if (frameDuration <= 250 && frameDuration >= 1000 / 58) {
         this.stableFrameSince = null;
         this.lowFrameSince ??= now;
         if (now - this.lowFrameSince >= 3000) this.setPerformanceFallback(true);
-      } else if (frameDuration < 24) {
+      } else if (frameDuration < 1000 / 62) {
         this.lowFrameSince = null;
         this.stableFrameSince ??= now;
         if (now - this.stableFrameSince >= 6000) this.setPerformanceFallback(false);

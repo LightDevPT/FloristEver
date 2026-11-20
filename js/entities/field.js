@@ -7,6 +7,12 @@ import { assetManager } from '../assets.js';
 import { PALETTE, drawRoundedRect, drawCoinIcon, distance, formatNumber } from '../utils.js';
 import { themeManager } from '../theme-manager.js';
 
+const MATURE_FLOWER_CACHE_THRESHOLD = 24;
+const MATURE_FLOWER_SPRITE_PHASES = 8;
+const MATURE_FLOWER_SPRITE_SIZE = 96;
+const MATURE_FLOWER_SPRITE_ORIGIN = 48;
+const MATURE_FLOWER_SPRITE_BASELINE = 64;
+
 export class FieldManager {
   constructor(state, sound, particles) {
     this.state = state;
@@ -31,6 +37,10 @@ export class FieldManager {
     this.flowerCandidateSource = null;
     this.flowerCandidateCount = -1;
     this.readyFlowers = [];
+    this.matureFlowerSprites = new Map();
+    this.matureFlowerSpriteSignature = null;
+    this.plotBaseSprites = new Map();
+    this.plotBaseSpriteSignature = null;
   }
 
   // Converte grelha de parcela em coordenadas do mundo
@@ -81,6 +91,98 @@ export class FieldManager {
       x: startX + col * spacingX,
       y: startY + row * spacingY
     };
+  }
+
+  getMatureFlowerSprites(flowerId, flowerConfig) {
+    // Performance fallback may toggle while the scene is running; keep the costly
+    // sprite cache stable and key it only on settings that change its base artwork.
+    const signature = [
+      themeManager.activeTheme?.id || 'classic',
+      this.state.settings?.graphicsQuality || 'normal',
+      this.state.settings?.themeReducedEffects === true
+    ].join(':');
+    if (signature !== this.matureFlowerSpriteSignature) {
+      this.matureFlowerSprites.clear();
+      this.matureFlowerSpriteSignature = signature;
+    }
+    const cachedSprites = this.matureFlowerSprites.get(flowerId);
+    if (cachedSprites) return cachedSprites;
+    if (typeof document === 'undefined') return null;
+
+    const sprites = [];
+    for (let phase = 0; phase < MATURE_FLOWER_SPRITE_PHASES; phase++) {
+      const canvas = document.createElement('canvas');
+      canvas.width = MATURE_FLOWER_SPRITE_SIZE;
+      canvas.height = MATURE_FLOWER_SPRITE_SIZE;
+      const spriteContext = canvas.getContext('2d');
+      if (!spriteContext) return null;
+      assetManager.drawFlower(
+        spriteContext,
+        MATURE_FLOWER_SPRITE_ORIGIN,
+        MATURE_FLOWER_SPRITE_BASELINE,
+        flowerConfig,
+        1,
+        (phase / MATURE_FLOWER_SPRITE_PHASES) * Math.PI * 4,
+        false
+      );
+      sprites.push(canvas);
+    }
+    this.matureFlowerSprites.set(flowerId, sprites);
+    return sprites;
+  }
+
+  getPlotBaseSprite(flowerId, flowerConfig, palette, luminousTheme) {
+    if (typeof document === 'undefined') return null;
+    const themeId = themeManager.activeTheme?.id || 'classic';
+    const maxScale = this.state.settings?.graphicsQuality === 'low'
+      ? 1.0
+      : this.state.settings?.graphicsQuality === 'normal'
+      ? 1.25
+      : 2.0;
+    const devicePixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio : 1;
+    const pixelScale = Math.max(1, Math.min(devicePixelRatio || 1, maxScale));
+    const fontReady = !document.fonts?.check || document.fonts.check('800 10px "Quicksand"');
+    const signature = `${themeId}:${pixelScale}:${fontReady}`;
+    if (signature !== this.plotBaseSpriteSignature) {
+      this.plotBaseSprites.clear();
+      this.plotBaseSpriteSignature = signature;
+    }
+    const cached = this.plotBaseSprites.get(flowerId);
+    if (cached) return cached;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(this.plotWidth * pixelScale);
+    canvas.height = Math.round((this.plotHeight + 10) * pixelScale);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.setTransform(pixelScale, 0, 0, pixelScale, 0, 10 * pixelScale);
+
+    ctx.fillStyle = palette.earthBrown;
+    ctx.strokeStyle = palette.deepGreen;
+    ctx.lineWidth = 3.5;
+    drawRoundedRect(ctx, 0, 0, this.plotWidth, this.plotHeight, 18, true, true);
+    ctx.strokeStyle = palette.earthGroove || (luminousTheme ? '#735A70' : '#744E31');
+    ctx.lineWidth = 2;
+    for (let row = 36; row < this.plotHeight; row += 56) {
+      ctx.beginPath();
+      ctx.moveTo(14, row + 16);
+      ctx.lineTo(this.plotWidth - 14, row + 16);
+      ctx.stroke();
+    }
+
+    ctx.font = '800 10px "Quicksand", sans-serif';
+    const nameWidth = Math.min(this.plotWidth - 56, Math.max(76, ctx.measureText(flowerConfig.name).width + 18));
+    ctx.fillStyle = palette.cream;
+    ctx.strokeStyle = palette.deepGreen;
+    ctx.lineWidth = 2;
+    drawRoundedRect(ctx, this.plotWidth / 2 - nameWidth / 2, -10, nameWidth, 18, 6, true, true);
+    ctx.fillStyle = palette.plumText;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(flowerConfig.name, this.plotWidth / 2, -1, nameWidth - 12);
+
+    this.plotBaseSprites.set(flowerId, canvas);
+    return canvas;
   }
 
   update(dt) {
@@ -271,6 +373,8 @@ export class FieldManager {
   draw(ctx, visibleBounds = null) {
     const luminousTheme = themeManager.activeTheme?.id === 'luminous-garden';
     const palette = themeManager.palette;
+    const now = Date.now();
+    const cacheMatureFlowers = true;
     let plotsToDraw = this.state.plots;
     if (visibleBounds) {
       if (this.cachedPlotGridSource !== this.state.plots || this.cachedPlotGridCount !== this.state.plots.length) {
@@ -301,31 +405,24 @@ export class FieldManager {
       ctx.translate(pos.x, pos.y);
 
       if (plot.unlocked) {
-        // Solo Fofo Adubado da Parcela
-        ctx.fillStyle = palette.earthBrown;
-        ctx.strokeStyle = palette.deepGreen;
-        ctx.lineWidth = 3.5;
-        drawRoundedRect(ctx, 0, 0, this.plotWidth, this.plotHeight, 18, true, true);
-
-        // Textura suave de sulcos na terra
-        ctx.strokeStyle = palette.earthGroove || (luminousTheme ? '#735A70' : '#744E31');
-        ctx.lineWidth = 2;
-        for (let row = 36; row < this.plotHeight; row += 56) {
-          ctx.beginPath();
-          ctx.moveTo(14, row + 16);
-          ctx.lineTo(this.plotWidth - 14, row + 16);
-          ctx.stroke();
+        const baseSprite = this.getPlotBaseSprite(plot.flowerId, flowerCfg, palette, luminousTheme);
+        if (baseSprite) ctx.drawImage(baseSprite, 0, -10, this.plotWidth, this.plotHeight + 10);
+        else {
+          ctx.fillStyle = palette.earthBrown;
+          ctx.strokeStyle = palette.deepGreen;
+          ctx.lineWidth = 3.5;
+          drawRoundedRect(ctx, 0, 0, this.plotWidth, this.plotHeight, 18, true, true);
         }
 
-        // Desenhar as 6 Flores
+        // Desenhar as 6 Flores com Path Batching para brilhos de flores prontas
+        const defaultReadyGlows = [];
         for (let i = 0; i < plot.flowers.length; i++) {
           const flower = plot.flowers[i];
-          const col = i % 3;
-          const row = Math.floor(i / 3);
-          const fx = 36 + col * 58;
-          const fy = 44 + row * 56;
-
           if (flower.progress >= 1) {
+            const col = i % 3;
+            const row = Math.floor(i / 3);
+            const fx = 36 + col * 58;
+            const fy = 44 + row * 56;
             const pulse = themeManager.getAnimationPulse();
             const themeDrewReadyEffect = themeManager.drawLayer(
               ctx,
@@ -335,55 +432,80 @@ export class FieldManager {
               pulse,
               themeManager.effectsReduced
             );
-            if (themeDrewReadyEffect) {
-              assetManager.drawFlower(
-                ctx,
-                fx,
-                fy,
-                flowerCfg,
-                flower.progress,
-                this.swayTime + i * 0.8
-              );
-              continue;
+            if (!themeDrewReadyEffect) {
+              const defaultPulse = luminousTheme ? 0 : (Math.sin(this.swayTime * 2 + i) + 1) / 2;
+              defaultReadyGlows.push({
+                x: fx,
+                y: fy,
+                r: luminousTheme ? 21 : 19 + defaultPulse * 3,
+                pulse: defaultPulse
+              });
             }
-            ctx.beginPath();
-            const defaultPulse = luminousTheme ? 0 : (Math.sin(this.swayTime * 2 + i) + 1) / 2;
-            ctx.arc(fx, fy, luminousTheme ? 21 : 19 + defaultPulse * 3, 0, Math.PI * 2);
-            ctx.fillStyle = luminousTheme
-              ? 'rgba(117, 229, 223, 0.11)'
-              : `rgba(247, 201, 72, ${0.12 + defaultPulse * 0.12})`;
-            ctx.fill();
-            ctx.strokeStyle = luminousTheme
-              ? 'rgba(255, 220, 158, 0.72)'
-              : `rgba(255, 253, 240, ${0.65 + defaultPulse * 0.3})`;
-            ctx.lineWidth = 2;
-            ctx.stroke();
           }
-
-          assetManager.drawFlower(
-            ctx,
-            fx,
-            fy,
-            flowerCfg,
-            flower.progress,
-            this.swayTime + i * 0.8
-          );
         }
 
-        // Plaquinha decorativa de madeira com nome da flor
-        ctx.font = '800 10px "Quicksand", sans-serif';
-        const nameWidth = Math.min(this.plotWidth - 56, Math.max(76, ctx.measureText(flowerCfg.name).width + 18));
-        ctx.fillStyle = palette.cream;
-        ctx.strokeStyle = palette.deepGreen;
-        ctx.lineWidth = 2;
-        drawRoundedRect(ctx, this.plotWidth / 2 - nameWidth / 2, -10, nameWidth, 18, 6, true, true);
+        // Loteamento (Batch): desenha todos os brilhos em um único conjunto de operações
+        if (defaultReadyGlows.length > 0) {
+          ctx.beginPath();
+          for (const g of defaultReadyGlows) {
+            ctx.moveTo(g.x + g.r, g.y);
+            ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+          }
+          const avgPulse = defaultReadyGlows.reduce((acc, g) => acc + g.pulse, 0) / defaultReadyGlows.length;
+          ctx.fillStyle = luminousTheme
+            ? 'rgba(117, 229, 223, 0.11)'
+            : `rgba(247, 201, 72, ${0.12 + avgPulse * 0.12})`;
+          ctx.fill();
+          ctx.strokeStyle = luminousTheme
+            ? 'rgba(255, 220, 158, 0.72)'
+            : `rgba(255, 253, 240, ${0.65 + avgPulse * 0.3})`;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
 
-        ctx.fillStyle = palette.plumText;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(flowerCfg.name, this.plotWidth / 2, -1, nameWidth - 12);
+        // Desenhar os sprites das flores
+        for (let i = 0; i < plot.flowers.length; i++) {
+          const flower = plot.flowers[i];
+          const col = i % 3;
+          const row = Math.floor(i / 3);
+          const fx = 36 + col * 58;
+          const fy = 44 + row * 56;
 
-        const waterStatus = this.state.getPlotWaterStatus(plot);
+          const swayAngle = this.swayTime + i * 0.8;
+          const flowerSprites = flower.progress >= 1 && cacheMatureFlowers
+            ? this.getMatureFlowerSprites(plot.flowerId, flowerCfg)
+            : null;
+          if (flowerSprites) {
+            const swayCycle = Math.PI * 4;
+            const normalizedSway = ((swayAngle % swayCycle) + swayCycle) % swayCycle;
+            const phase = Math.min(
+              MATURE_FLOWER_SPRITE_PHASES - 1,
+              Math.floor((normalizedSway / swayCycle) * MATURE_FLOWER_SPRITE_PHASES)
+            );
+            ctx.drawImage(
+              flowerSprites[phase],
+              fx - MATURE_FLOWER_SPRITE_ORIGIN,
+              fy - MATURE_FLOWER_SPRITE_BASELINE
+            );
+            if (typeof themeManager.activeTheme?.drawFlowerHalo === 'function') {
+              ctx.save();
+              ctx.translate(fx, fy - 14);
+              themeManager.drawFlowerHalo(ctx, flowerCfg);
+              ctx.restore();
+            }
+          } else {
+            assetManager.drawFlower(
+              ctx,
+              fx,
+              fy,
+              flowerCfg,
+              flower.progress,
+              swayAngle
+            );
+          }
+        }
+
+        const waterStatus = this.state.getPlotWaterStatus(plot, now);
         const waterActive = waterStatus.active;
         const waterAvailable = waterStatus.available;
         const badgeX = this.plotWidth - 36;

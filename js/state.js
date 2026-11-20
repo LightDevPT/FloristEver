@@ -218,6 +218,7 @@ export class GameState {
       sfxMuted: false,
       musicMuted: false,
       dayNightCycle: true,
+      graphicsQuality: 'normal',
       themePreference: 'auto',
       themeReducedEffects: false,
       mobileControlLayout: 'left',

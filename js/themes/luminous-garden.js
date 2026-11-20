@@ -25,6 +25,11 @@ const FLOWER_COLORS = Object.freeze({
 
 const haloSprites = new Map();
 const PERIOD_MS = 6400;
+const TREE_PALETTES = Object.freeze([
+  Object.freeze({ leafGreen: '#285758', highlight: '#36706B', deepGreen: '#14233A' }),
+  Object.freeze({ leafGreen: '#314E68', highlight: '#53758A', deepGreen: '#14233A' }),
+  Object.freeze({ leafGreen: '#3D5960', highlight: '#6E8D84', deepGreen: '#14233A' })
+]);
 
 function drawLantern(ctx, x, y, scale = 1) {
   ctx.save();
@@ -110,7 +115,7 @@ export const LUMINOUS_GARDEN_THEME = Object.freeze({
   type: 'permanent',
   paletteAppliesToWorld: true,
   unlockLevel: 10,
-  maxHalosActive: 24,
+  maxHalosActive: 12,
   haloPulsePeriodMs: PERIOD_MS,
   palette: Object.freeze({
     cream: '#F2EEDD',
@@ -164,12 +169,7 @@ export const LUMINOUS_GARDEN_THEME = Object.freeze({
   fenceColor: 'rgba(119, 155, 145, 0.9)',
   awningColors: Object.freeze(['#536582', '#2F5A5A', '#9B7BFF', '#2F5A5A']),
   getTreePalette(x, y) {
-    const variants = [
-      { leafGreen: '#285758', highlight: '#36706B', deepGreen: '#14233A' },
-      { leafGreen: '#314E68', highlight: '#53758A', deepGreen: '#14233A' },
-      { leafGreen: '#3D5960', highlight: '#6E8D84', deepGreen: '#14233A' }
-    ];
-    return variants[Math.abs(Math.floor(x * 13 + y * 7)) % variants.length];
+    return TREE_PALETTES[Math.abs(Math.floor(x * 13 + y * 7)) % TREE_PALETTES.length];
   },
   resolveFlowerConfig(flowerConfig) {
     const colors = FLOWER_COLORS[flowerConfig.id];
