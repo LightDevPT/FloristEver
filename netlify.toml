@@ -1,3 +1,0 @@
-[build]
-  publish = "dist"
-  command = "FLORESTEVER_DEV_BUILD=0 npm run build:web"
