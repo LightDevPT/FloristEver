@@ -26,11 +26,6 @@ import { TutorialManager } from './ui/tutorial.js';
 import { GameTutorial } from './ui/game-tutorial.js';
 import { CinematicManager } from './ui/cinematic-manager.js';
 import { AccountUi } from './ui/account.js';
-import {
-  applyLocalFullTestProfile,
-  DeveloperToolsPanel,
-  isLocalFullTestMode
-} from './ui/developer-tools.js';
 import { HudCustomizer } from './ui/hud-customizer.js';
 import {
   ONBOARDING_COMPLETED_KEY,
@@ -139,7 +134,7 @@ function renderTermsDocument(markdown, container) {
 
 class Game {
   constructor() {
-    this.sessionTestMode = isLocalFullTestMode(window.location);
+    this.sessionTestMode = false;
     state.sessionOnlyMode = this.sessionTestMode;
     this.canvas = document.getElementById('game-canvas');
     this.ctx = this.canvas.getContext('2d');
@@ -167,10 +162,8 @@ class Game {
       }
       this.shopUi.openChallenges();
     };
-    this.developerTools = new DeveloperToolsPanel(state, this.hud, () => this.accountUi?.client.user, this);
     this.accountUi = new AccountUi(state, this.hud, {
-      disableSync: this.sessionTestMode,
-      onAccountChange: () => this.developerTools.refreshAccess()
+      disableSync: false
     });
     this.onboardingAccountUi = new AccountUi(state, this.hud, {
       hostId: 'onboarding-account-panel',
@@ -320,13 +313,6 @@ class Game {
         this.cachedPathPlots = null;
       }
     });
-    if (this.sessionTestMode) {
-      applyLocalFullTestProfile(state);
-      this.hud.showToast(
-        'Modo de teste completo ativo: terrenos, flores, melhorias e zonas desbloqueados. O progresso de teste não será guardado.',
-        'check'
-      );
-    }
     if (state.saveBlocked) {
       this.hud.showToast(
         'O progresso não pôde ser carregado. As gravações e a sincronização foram bloqueadas para proteger o save.',
@@ -1186,7 +1172,6 @@ class Game {
     this.openSettings = () => {
       if (!modalSettings) return;
       soundManager.playClick();
-      this.developerTools.refreshAccess();
       this.openSettingsPanel('general');
     };
 
@@ -1219,18 +1204,6 @@ class Game {
 
     if (openBtn && modalSettings) {
       openBtn.addEventListener('click', () => this.openSettings());
-
-      const devBtn = document.getElementById('btn-open-dev-tools');
-      if (devBtn) {
-        devBtn.addEventListener('click', () => {
-          soundManager.playClick();
-          this.developerTools.refreshAccess();
-          this.openSettingsPanel('system');
-          setTimeout(() => {
-            document.getElementById('developer-tools-panel')?.scrollIntoView({ behavior: 'smooth' });
-          }, 50);
-        });
-      }
 
       modalSettings.addEventListener('click', (e) => {
         if (e.target.closest('[data-close]') || e.target === modalSettings) {
@@ -1998,8 +1971,7 @@ class Game {
     // Clamp para evitar saltos enormes quando o utilizador muda de separador
     if (dt > 0.1) dt = 0.1;
 
-    const monitorPerformance = this.developerTools?.isPerformanceHudEnabled();
-    const frameWorkStart = monitorPerformance ? performance.now() : 0;
+    const monitorPerformance = false;
     const canSimulate =
       !this.cinematicManager?.isPlaying
       && !this.gameTutorial?.isOpen()
@@ -2015,17 +1987,7 @@ class Game {
     } else {
       this.simulationAccumulator = 0;
     }
-    const renderStart = monitorPerformance ? performance.now() : 0;
     this.render();
-    if (monitorPerformance) {
-      const renderEnd = performance.now();
-      this.developerTools.recordPerformanceFrame(
-        timestamp,
-        renderStart - frameWorkStart,
-        renderEnd - renderStart,
-        this
-      );
-    }
 
     requestAnimationFrame((t) => this.gameLoop(t));
   }
@@ -3918,14 +3880,6 @@ class Game {
 function initGameInstance() {
   window.floristGame = new Game();
   window.game = window.floristGame;
-  window.subsoloDev = {
-    unlock: () => window.floristGame?.developerTools?.unlockSubsolo(),
-    enter: () => window.floristGame?.developerTools?.enterSubsolo(),
-    exit: () => window.floristGame?.developerTools?.exitSubsolo(),
-    fill: () => window.floristGame?.developerTools?.fillSubsolo(),
-    customer: () => window.floristGame?.developerTools?.spawnSecretCustomer(),
-    fiscal: () => window.floristGame?.developerTools?.triggerFiscal()
-  };
 }
 
 if (document.readyState === 'loading') {

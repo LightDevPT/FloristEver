@@ -168,7 +168,7 @@ export class SecretCustomerManager {
         <div class="secret-trade-quote-box">
           <span class="transmission-label">TRANSMISSÃO INTERCETADA:</span>
           <div class="quote-text">"${order.phrase}"</div>
-          ${assist ? `<div class="quote-assist-pill">${ICONS.subsoloDev} <span>Pedido decifrado: <strong>${order.quantity}x ${prodConfig.name}</strong></span></div>` : ''}
+          ${assist ? `<div class="quote-assist-pill"><span>Pedido decifrado: <strong>${order.quantity}x ${prodConfig.name}</strong></span></div>` : ''}
         </div>
 
         ${countersign ? `

@@ -74,7 +74,6 @@ const ASSETS_TO_CACHE = [
   "./js/ui/account.js",
   "./js/ui/bouquet.js",
   "./js/ui/cinematic-manager.js",
-  "./js/ui/developer-tools.js",
   "./js/ui/game-tutorial.js",
   "./js/ui/hud-customizer.js",
   "./js/ui/hud.js",
