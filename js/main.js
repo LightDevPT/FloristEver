@@ -369,8 +369,45 @@ class Game {
     this.setupConnectionStatus();
     this.setupServiceWorkerUpdatePrompt();
     this.setupAutosave();
+    this.ensurePlayerVisible();
     // Iniciar loop de jogo
     requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
+  }
+
+  ensurePlayerVisible() {
+    if (!Number.isFinite(this.player.x) || !Number.isFinite(this.player.y)) {
+      this.player.x = 350;
+      this.player.y = 340;
+    }
+
+    this.collisionObstacles = null;
+    const collisionObstacles = this.getPlayerCollisionObstacles();
+    if (!this.canPlayerOccupy(this.player.x, this.player.y, collisionObstacles)) {
+      let freePosition = null;
+      for (let radius = 8; radius <= 192 && !freePosition; radius += 8) {
+        for (let direction = 0; direction < 32; direction++) {
+          const angle = (direction / 32) * Math.PI * 2;
+          const x = clamp(this.player.x + Math.cos(angle) * radius, this.mapBounds.minX, this.mapBounds.maxX);
+          const y = clamp(this.player.y + Math.sin(angle) * radius, this.mapBounds.minY, this.mapBounds.maxY);
+          if (this.canPlayerOccupy(x, y, collisionObstacles)) {
+            freePosition = { x, y };
+            break;
+          }
+        }
+      }
+      if (freePosition) {
+        this.player.x = freePosition.x;
+        this.player.y = freePosition.y;
+      }
+    }
+
+    this.player.standUp();
+    this.player.setInput(0, 0);
+    this.player.targetX = this.player.x;
+    this.player.targetY = this.player.y;
+    this.player.hasTarget = false;
+    this.camera.targetX = this.player.x;
+    this.camera.targetY = this.player.y;
   }
 
   handleResize() {
@@ -1993,6 +2030,9 @@ class Game {
   }
 
   update(dt) {
+    if (!Number.isFinite(this.player.x) || !Number.isFinite(this.player.y)) {
+      this.ensurePlayerVisible();
+    }
     this.sceneManager?.update(dt);
     if (this.sceneManager?.isSubsoloActive()) {
       this.subsoloRenderer?.update(dt);
@@ -2325,10 +2365,6 @@ class Game {
     this.workerManager.draw(this.ctx, this.visibleWorldBounds);
     this.bouquetWorkerManager.draw(this.ctx, this.visibleWorldBounds);
 
-    // 7. Jogador
-    const cap = state.getBasketCapacity();
-    this.player.draw(this.ctx, state.basket.length, cap);
-
     // 8. Árvores e Elementos de Ambientação
     if (
       this.cachedTreePlotSource !== this.state.plots
@@ -2374,6 +2410,10 @@ class Game {
 
     // 9. Partículas (Pétalas, Moedas, Corações)
     this.particles.draw(this.ctx, this.visibleWorldBounds);
+
+    // 10. Jogador por cima dos elementos do terreno e da ambientação
+    const cap = state.getBasketCapacity();
+    this.player.draw(this.ctx, state.basket.length, cap);
 
     this.ctx.restore();
 
