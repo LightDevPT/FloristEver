@@ -358,12 +358,12 @@ export const COLOR_FESTIVAL_THEME = Object.freeze({
     ctx.restore();
   },
 
-  drawStockSignDecor(ctx, x, y, width) {
+  drawStockSignDecor(ctx, x, y, width, height) {
     ctx.save();
     ctx.strokeStyle = '#FF5FA2';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(x - 2, y - 2, width + 4, 42, 9);
+    ctx.roundRect(x - 2, y - 2, width + 4, height + 4, 9);
     ctx.stroke();
     drawSparkle(ctx, x + width - 9, y + 8, 10, '#FFD60A');
     drawBalloon(ctx, x + 9, y + 8, 9, '#9B5DE5');

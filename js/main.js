@@ -54,7 +54,9 @@ const GREENHOUSE_UNDER_CONSTRUCTION = true;
 
 const ROAD_DISTANCE = 20;
 const ROAD_CORNER_RADIUS = 72;
+const ROAD_TOP_RIGHT_CORNER_RADIUS = 48;
 const CORRIDOR_OVERLAP = 8;
+const ROAD_FENCE_GATE_HALF_WIDTH = 35;
 
 function appendTermsInlineContent(parent, text) {
   const markdownPattern = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
@@ -191,6 +193,7 @@ class Game {
     this.cachedPathPlots = null;
     this.cachedPathPlotCount = -1;
     this.cachedPathSegments = null;
+    this.cachedPathSegmentsVersion = 0;
     this.cachedPathsCanvas = null;
     this.cachedPathsKey = null;
     this.cachedPathsBounds = null;
@@ -314,6 +317,7 @@ class Game {
         'garden_decoration_moved'
       ].includes(event)) {
         this.collisionObstacles = null;
+        this.cachedPathPlots = null;
       }
     });
     if (this.sessionTestMode) {
@@ -1472,11 +1476,16 @@ class Game {
     const luminousInput = document.querySelector('input[name="theme-preference"][value="luminous"]');
     const luminousHelp = document.getElementById('theme-luminous-help');
     const performanceNotice = document.getElementById('theme-performance-notice');
+    const padraoRemasterOption = document.getElementById('theme-option-padrao-remaster');
     const preferenceInputs = [...document.querySelectorAll('input[name="theme-preference"]')];
     if (!reducedEffects || !saveError) return;
 
     this.refreshThemeSettings = () => {
       const preference = themeManager.preference;
+      padraoRemasterOption?.classList.toggle(
+        'hidden',
+        window.floristEverBuildInfo?.devMode !== true
+      );
       preferenceInputs.forEach((input) => {
         input.checked = input.value === preference;
         input.closest('.theme-option')?.classList.toggle('is-selected', input.checked);
@@ -2536,13 +2545,13 @@ class Game {
     const roadLeftX = this.fieldManager.originX - 50;
     const roadRightX = fieldRight + 24;
     const roadBottomY = fieldBottom + 24;
+    const roadTopY = this.getRightRoadTopY(this.getRoadLayout());
     const mapPath = new Path2D();
     mapPath.moveTo(mapX(0), mapY(218));
     mapPath.lineTo(mapX(roadLeftX), mapY(218));
     mapPath.lineTo(mapX(roadLeftX), mapY(roadBottomY));
     mapPath.lineTo(mapX(roadRightX), mapY(roadBottomY));
-    mapPath.lineTo(mapX(roadRightX), mapY(444));
-    mapPath.quadraticCurveTo(mapX(roadRightX), mapY(420), mapX(roadRightX + 24), mapY(420));
+    mapPath.lineTo(mapX(roadRightX), mapY(roadTopY));
     const greenhouse = this.cachedLongTermProjects
       .find((project) => project.zone.id === 'greenhouse')?.zone;
     if (greenhouse) {
@@ -2796,6 +2805,16 @@ class Game {
     return { fieldRight, fieldBottom, stepX, stepY, left, right, bottom, radius, topLeftRadius, exitY };
   }
 
+  // A espinha sobe até ao topo do jardim, ligando também o primeiro corredor.
+  getRightRoadTopY(layout) {
+    let top = Infinity;
+    for (const path of this.cachedPathSegments?.horizontal || []) {
+      const centerY = path.y + path.height / 2;
+      if (centerY < top) top = centerY;
+    }
+    return Math.min(Number.isFinite(top) ? top : layout.exitY, this.fieldManager.originY);
+  }
+
   renderPaths() {
     const ctx = this.ctx;
     const fm = this.fieldManager;
@@ -2804,25 +2823,6 @@ class Game {
     const layout = this.getRoadLayout();
     const greenhouse = this.cachedLongTermProjects
       .find((project) => project.zone.id === 'greenhouse')?.zone;
-
-    // Chave única para invalidar o offscreen canvas quando caminhos, canteiros ou temas mudarem
-    const pathsKey = [
-      layout.left, layout.right, layout.bottom, layout.radius, layout.topLeftRadius, layout.exitY,
-      greenhouse ? `${greenhouse.x},${greenhouse.y}` : '-',
-      this.state.plots.length,
-      palette.pathEarth || '#986947',
-      palette.pathSoil || '#BF9462',
-      palette.pathSurface || '#D7BF8B',
-      reduced ? 'red' : 'full'
-    ].join('|');
-
-    if (this.cachedPathsCanvas && this.cachedPathsKey === pathsKey) {
-      const b = this.cachedPathsBounds;
-      if (this.isWorldRectVisible(b.minX, b.minY, b.maxX, b.maxY)) {
-        ctx.drawImage(this.cachedPathsCanvas, b.minX, b.minY);
-      }
-      return;
-    }
 
     // ── Segmentos do jardim (atualiza lista se mudaram as parcelas) ──
     if (this.cachedPathPlots !== this.state.plots || this.cachedPathPlotCount !== this.state.plots.length) {
@@ -2838,6 +2838,27 @@ class Game {
       });
       this.cachedPathPlots = this.state.plots;
       this.cachedPathPlotCount = this.state.plots.length;
+      this.cachedPathSegmentsVersion = (this.cachedPathSegmentsVersion || 0) + 1;
+    }
+
+    // Chave única para invalidar o offscreen canvas quando caminhos, canteiros ou temas mudarem
+    const pathsKey = [
+      layout.left, layout.right, layout.bottom, layout.radius, layout.topLeftRadius, layout.exitY,
+      greenhouse ? `${greenhouse.x},${greenhouse.y}` : '-',
+      this.state.plots.length,
+      this.cachedPathSegmentsVersion,
+      palette.pathEarth || '#986947',
+      palette.pathSoil || '#BF9462',
+      palette.pathSurface || '#D7BF8B',
+      reduced ? 'red' : 'full'
+    ].join('|');
+
+    if (this.cachedPathsCanvas && this.cachedPathsKey === pathsKey) {
+      const b = this.cachedPathsBounds;
+      if (this.isWorldRectVisible(b.minX, b.minY, b.maxX, b.maxY)) {
+        ctx.drawImage(this.cachedPathsCanvas, b.minX, b.minY);
+      }
+      return;
     }
 
     // Calcular limites geométricos de todos os caminhos
@@ -2860,13 +2881,27 @@ class Game {
     offCtx.translate(-minX, -minY);
 
     // ── Estrada principal ──
+    // Percurso contínuo: esquerda → fundo → lado direito, subindo até ao corredor
+    // mais alto e curvando para dentro dele. Sem ramo a virar para a direita.
+    const roadTopY = this.getRightRoadTopY(layout);
+    const topRightRadius = Math.max(
+      0,
+      Math.min(
+        ROAD_TOP_RIGHT_CORNER_RADIUS,
+        layout.radius,
+        layout.bottom - layout.radius - roadTopY - 1
+      )
+    );
     const road = new Path2D();
     road.moveTo(0, 218);
     road.arcTo(layout.left, 218, layout.left, layout.bottom, layout.topLeftRadius);
     road.arcTo(layout.left, layout.bottom, layout.right, layout.bottom, layout.radius);
-    road.arcTo(layout.right, layout.bottom, layout.right, layout.exitY, layout.radius);
-    road.arcTo(layout.right, layout.exitY, layout.right + layout.radius, layout.exitY, layout.radius);
-    road.lineTo(layout.right + layout.radius + 24, layout.exitY);
+    road.arcTo(layout.right, layout.bottom, layout.right, roadTopY + topRightRadius, layout.radius);
+    road.lineTo(layout.right, roadTopY + topRightRadius);
+    if (topRightRadius > 0) {
+      road.arcTo(layout.right, roadTopY, layout.right - topRightRadius, roadTopY, topRightRadius);
+    }
+    road.lineTo(layout.right - topRightRadius, roadTopY);
     if (greenhouse) {
       road.moveTo(layout.left - layout.topLeftRadius, 218);
       road.bezierCurveTo(150, 235, 0, 300, -180, 320);
@@ -3103,18 +3138,45 @@ class Game {
       gates.push([y - 18, y + 18]);
     }
 
+    // Abre a vedação ao longo da espinha contínua do lado direito.
+    const rightGates = [...gates];
+    const rightRoadLayout = this.getRoadLayout();
+    const rightRoadTopY = this.getRightRoadTopY(rightRoadLayout);
+    rightGates.push([
+      rightRoadTopY - ROAD_FENCE_GATE_HALF_WIDTH,
+      rightRoadLayout.bottom + ROAD_FENCE_GATE_HALF_WIDTH
+    ]);
+
     ctx.save();
     ctx.strokeStyle = theme?.fenceColor || 'rgba(139, 94, 60, 0.68)';
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.setLineDash([]);
-    if (visible.top <= top + 8 && visible.bottom >= top - 8) drawHorizontal(left, right, top);
+    if (visible.top <= top + 8 && visible.bottom >= top - 8) {
+      const topRightRadius = Math.max(
+        0,
+        Math.min(
+          ROAD_TOP_RIGHT_CORNER_RADIUS,
+          rightRoadLayout.radius,
+          rightRoadLayout.bottom - rightRoadLayout.radius - rightRoadTopY - 1
+        )
+      );
+      const topGateCenter = rightRoadLayout.right - topRightRadius;
+      const topGateStart = Math.max(left, topGateCenter - ROAD_FENCE_GATE_HALF_WIDTH);
+      const topGateEnd = Math.min(right, topGateCenter + ROAD_FENCE_GATE_HALF_WIDTH);
+      if (rightRoadTopY - ROAD_FENCE_GATE_HALF_WIDTH <= top && topGateStart < topGateEnd) {
+        if (topGateStart > left) drawHorizontal(left, topGateStart, top);
+        if (topGateEnd < right) drawHorizontal(topGateEnd, right, top);
+      } else {
+        drawHorizontal(left, right, top);
+      }
+    }
     const verticalTop = Math.max(top, visible.top - 8);
     const verticalBottom = Math.min(bottom, visible.bottom + 8);
     if (verticalBottom > verticalTop) {
       drawVertical(left, verticalTop, verticalBottom, gates);
-      drawVertical(right, verticalTop, verticalBottom, gates);
+      drawVertical(right, verticalTop, verticalBottom, rightGates);
     }
     ctx.restore();
   }

@@ -228,12 +228,12 @@ export const HEARTS_GARDEN_THEME = Object.freeze({
     drawBow(ctx, x + width / 2, y - 4, 0.8);
     ctx.restore();
   },
-  drawStockSignDecor(ctx, x, y, width) {
+  drawStockSignDecor(ctx, x, y, width, height) {
     ctx.save();
     ctx.strokeStyle = '#F0A07A';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(x - 2, y - 2, width + 4, 42, 9);
+    ctx.roundRect(x - 2, y - 2, width + 4, height + 4, 9);
     ctx.stroke();
     drawHeart(ctx, x + width - 9, y + 8, 8, '#E34B78');
     ctx.restore();

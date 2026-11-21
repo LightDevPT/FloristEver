@@ -326,12 +326,12 @@ export const GOLDEN_AUTUMN_THEME = Object.freeze({
     ctx.restore();
   },
 
-  drawStockSignDecor(ctx, x, y, width) {
+  drawStockSignDecor(ctx, x, y, width, height) {
     ctx.save();
     ctx.strokeStyle = '#E8892F';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(x - 2, y - 2, width + 4, 42, 9);
+    ctx.roundRect(x - 2, y - 2, width + 4, height + 4, 9);
     ctx.stroke();
     drawLeaf(ctx, x + width - 9, y + 8, 10, '#B5382A', 0.6);
     drawAcorn(ctx, x + 9, y + 8, 0.7);

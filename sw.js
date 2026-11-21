@@ -1,5 +1,5 @@
 // FloristEver Service Worker
-const CACHE_NAME = 'floristever-v89';
+const CACHE_NAME = 'floristever-v90';
 const ASSETS_TO_CACHE = [
   "./",
   "./FloristEver_Termos_e_Condicoes.md",
@@ -124,6 +124,7 @@ self.addEventListener('fetch', (event) => {
     event.request.method !== 'GET'
     || !['http:', 'https:'].includes(requestUrl.protocol)
     || requestUrl.origin !== self.location.origin
+    || requestUrl.pathname.startsWith('/api/')
   ) {
     return;
   }
