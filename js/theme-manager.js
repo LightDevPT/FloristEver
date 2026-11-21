@@ -5,17 +5,19 @@ import { LUMINOUS_GARDEN_THEME } from './themes/luminous-garden.js';
 import { HEARTS_GARDEN_THEME } from './themes/hearts-garden.js';
 import { GOLDEN_AUTUMN_THEME } from './themes/theme-outono-dourado.js';
 import { COLOR_FESTIVAL_THEME } from './themes/theme-festival-das-cores.js';
+import { PADRAO_REMASTER_THEME } from './themes/padrao-remaster-theme.js';
 
 export const EVENT_THEMES_ENABLED = true;
 export const PERMANENT_THEMES_ENABLED = true;
 export const LUMINOUS_GARDEN_UNLOCK_LEVEL = LUMINOUS_GARDEN_THEME.unlockLevel;
-export const THEME_PREFERENCES = Object.freeze(['auto', 'halloween', 'luminous', 'jardim_coracoes', 'outono_dourado', 'festival_cores', 'classic']);
+export const THEME_PREFERENCES = Object.freeze(['auto', 'halloween', 'luminous', 'jardim_coracoes', 'outono_dourado', 'festival_cores', 'padrao_remaster', 'classic']);
 const THEMES_BY_PREFERENCE = new Map([
   ['halloween', HALLOWEEN_THEME],
   ['luminous', LUMINOUS_GARDEN_THEME],
   ['jardim_coracoes', HEARTS_GARDEN_THEME],
   ['outono_dourado', GOLDEN_AUTUMN_THEME],
-  ['festival_cores', COLOR_FESTIVAL_THEME]
+  ['festival_cores', COLOR_FESTIVAL_THEME],
+  ['padrao_remaster', PADRAO_REMASTER_THEME]
 ]);
 const THEMES_BY_ID = new Map([...THEMES_BY_PREFERENCE.values()].map((theme) => [theme.id, theme]));
 

@@ -1,5 +1,5 @@
 // FloristEver Service Worker
-const CACHE_NAME = 'floristever-v90';
+const CACHE_NAME = 'floristever-v91';
 const ASSETS_TO_CACHE = [
   "./",
   "./FloristEver_Termos_e_Condicoes.md",
@@ -71,6 +71,7 @@ const ASSETS_TO_CACHE = [
   "./js/themes/luminous-garden.js",
   "./js/themes/theme-festival-das-cores.js",
   "./js/themes/theme-outono-dourado.js",
+  "./js/themes/padrao-remaster-theme.js",
   "./js/ui/account.js",
   "./js/ui/bouquet.js",
   "./js/ui/cinematic-manager.js",

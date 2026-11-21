@@ -1289,6 +1289,12 @@ body.hud-customizing .hud-customizable.hud-editor-selected {
     linear-gradient(135deg, #FF5FA2 0 32%, #9B5DE5 33% 64%, #2EC4B6 65%);
 }
 
+.theme-swatch-padrao-remaster {
+  background:
+    radial-gradient(circle at 72% 28%, #F9C74F 0 8%, transparent 9%),
+    linear-gradient(135deg, #A3CF78 0 36%, #FFF4DC 37% 61%, #F2A0B5 62% 80%, #4E9F5F 81%);
+}
+
 .theme-swatch-luminous {
   background: linear-gradient(135deg, #2F5A5A 0 38%, #9B7BFF 39% 62%, #4FD6D0 63% 79%, #FFB347 80%);
 }
