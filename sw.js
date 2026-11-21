@@ -40,6 +40,7 @@ const ASSETS_TO_CACHE = [
   "./js/assets.js",
   "./js/audio.js",
   "./js/build-info.js",
+  "./js/distribution-gate.js",
   "./js/config/bouquets.js",
   "./js/config/customers.js",
   "./js/config/flowers.js",

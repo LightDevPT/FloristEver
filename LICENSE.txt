@@ -1,0 +1,20 @@
+FLORISTEVER SOURCE-AVAILABLE LICENSE
+Version 1.0 - 21 November 2026
+
+Copyright (c) 2026 Light Group / FloristEver.
+
+The source code in this repository is made publicly readable for evaluation,
+learning and issue reporting only.
+
+No right is granted to copy, reproduce, execute, install, host, modify, create
+derivative works from, redistribute, sell, sublicense or commercially use the
+source code, assets or compiled game, in whole or in part.
+
+Authorized distribution is limited to official APK and EXE packages, official
+web releases and download channels explicitly published by Light Group.
+
+Viewing or downloading the repository does not grant a software license.
+Unauthorized execution or modification of the source is prohibited.
+
+The source is provided "as is", without warranties of any kind.
+Light Group reserves all rights not expressly granted in this license.

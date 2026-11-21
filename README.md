@@ -12,7 +12,7 @@ Cultiva flores, acolhe clientes e cria a floricultura dos teus sonhos num jogo c
 
 <br>
 
-<a href="https://floristever.netlify.app">Jogar agora</a> · <a href="#o-jogo">Descobrir o jogo</a> · <a href="#para-programadores">Executar localmente</a> · <a href="https://github.com/LightDevPT/FloristEver/issues">Reportar um problema</a>
+<a href="https://floristever.netlify.app">Jogar agora</a> · <a href="#o-jogo">Descobrir o jogo</a> · <a href="#codigo-fonte">Código-fonte</a> · <a href="https://github.com/LightDevPT/FloristEver/issues">Reportar um problema</a>
 
 </div>
 
@@ -47,37 +47,17 @@ Melhora a floricultura, explora novos espaços e descobre surpresas escondidas. 
 - **Android e Windows:** o projeto inclui configurações de compilação para as versões nativas.
 - **Sem conta:** o jogo guarda o progresso localmente. A conta e a sincronização entre dispositivos são opcionais.
 
-## Para programadores
+## Código-fonte
 
-### Requisitos
+Este repositório é **público apenas para consulta, revisão e reporte de problemas**.
+Consultar ou descarregar o código não concede autorização para executar, copiar,
+modificar, redistribuir, publicar ou criar versões derivadas.
 
-- Node.js 20 ou superior e npm.
-- JDK 17+, Android Studio e Android SDK para compilar a versão Android.
-- Windows para criar os instaladores Windows.
+O jogo oficial pode ser executado apenas pelos canais publicados pela Light Group:
+browser oficial, APK oficial e instalador EXE oficial. Não são fornecidos neste
+repositório os ficheiros necessários para executar uma cópia local em `localhost`.
 
-### Começar
-
-```bash
-git clone https://github.com/LightDevPT/FloristEver.git
-cd FloristEver
-npm install
-npm start
-```
-
-Abre [http://localhost:8080](http://localhost:8080) no navegador.
-
-### Preparar uma versão para jogar
-
-| Comando | Para que serve |
-| --- | --- |
-| `npm start` | Iniciar o jogo localmente. |
-| `npm run build:web` | Criar a versão web em `dist/`. |
-| `npm run validate` | Construir e validar a versão web. |
-| `npm run standalone` | Gerar uma versão HTML autónoma. |
-| `npm run win:installer` | Criar o instalador Windows. |
-| `npm run android:apk:debug` | Criar um APK Android de depuração. |
-
-Os ficheiros de build e distribuição estão limitados ao que é necessário para compilar e executar o jogo.
+Consulte [LICENSE.txt](LICENSE.txt) para os termos completos.
 
 ## O teu progresso
 
