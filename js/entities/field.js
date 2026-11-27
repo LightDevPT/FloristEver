@@ -8,7 +8,6 @@ import { PALETTE, drawRoundedRect, drawCoinIcon, distance, formatNumber } from '
 import { themeManager } from '../theme-manager.js';
 
 const MATURE_FLOWER_CACHE_THRESHOLD = 24;
-const MATURE_FLOWER_SPRITE_PHASES = 8;
 const MATURE_FLOWER_SPRITE_SIZE = 96;
 const MATURE_FLOWER_SPRITE_ORIGIN = 48;
 const MATURE_FLOWER_SPRITE_BASELINE = 64;
@@ -93,7 +92,7 @@ export class FieldManager {
     };
   }
 
-  getMatureFlowerSprites(flowerId, flowerConfig) {
+  getMatureFlowerSprite(flowerId, flowerConfig) {
     // Performance fallback may toggle while the scene is running; keep the costly
     // sprite cache stable and key it only on settings that change its base artwork.
     const signature = [
@@ -105,30 +104,26 @@ export class FieldManager {
       this.matureFlowerSprites.clear();
       this.matureFlowerSpriteSignature = signature;
     }
-    const cachedSprites = this.matureFlowerSprites.get(flowerId);
-    if (cachedSprites) return cachedSprites;
+    const cachedSprite = this.matureFlowerSprites.get(flowerId);
+    if (cachedSprite) return cachedSprite;
     if (typeof document === 'undefined') return null;
 
-    const sprites = [];
-    for (let phase = 0; phase < MATURE_FLOWER_SPRITE_PHASES; phase++) {
-      const canvas = document.createElement('canvas');
-      canvas.width = MATURE_FLOWER_SPRITE_SIZE;
-      canvas.height = MATURE_FLOWER_SPRITE_SIZE;
-      const spriteContext = canvas.getContext('2d');
-      if (!spriteContext) return null;
-      assetManager.drawFlower(
-        spriteContext,
-        MATURE_FLOWER_SPRITE_ORIGIN,
-        MATURE_FLOWER_SPRITE_BASELINE,
-        flowerConfig,
-        1,
-        (phase / MATURE_FLOWER_SPRITE_PHASES) * Math.PI * 4,
-        false
-      );
-      sprites.push(canvas);
-    }
-    this.matureFlowerSprites.set(flowerId, sprites);
-    return sprites;
+    const canvas = document.createElement('canvas');
+    canvas.width = MATURE_FLOWER_SPRITE_SIZE;
+    canvas.height = MATURE_FLOWER_SPRITE_SIZE;
+    const spriteContext = canvas.getContext('2d');
+    if (!spriteContext) return null;
+    assetManager.drawFlower(
+      spriteContext,
+      MATURE_FLOWER_SPRITE_ORIGIN,
+      MATURE_FLOWER_SPRITE_BASELINE,
+      flowerConfig,
+      1,
+      0,
+      false
+    );
+    this.matureFlowerSprites.set(flowerId, canvas);
+    return canvas;
   }
 
   getPlotBaseSprite(flowerId, flowerConfig, palette, luminousTheme) {
@@ -472,21 +467,19 @@ export class FieldManager {
           const fy = 44 + row * 56;
 
           const swayAngle = this.swayTime + i * 0.8;
-          const flowerSprites = flower.progress >= 1 && cacheMatureFlowers
-            ? this.getMatureFlowerSprites(plot.flowerId, flowerCfg)
+          const flowerSprite = flower.progress >= 1 && cacheMatureFlowers
+            ? this.getMatureFlowerSprite(plot.flowerId, flowerCfg)
             : null;
-          if (flowerSprites) {
-            const swayCycle = Math.PI * 4;
-            const normalizedSway = ((swayAngle % swayCycle) + swayCycle) % swayCycle;
-            const phase = Math.min(
-              MATURE_FLOWER_SPRITE_PHASES - 1,
-              Math.floor((normalizedSway / swayCycle) * MATURE_FLOWER_SPRITE_PHASES)
-            );
+          if (flowerSprite) {
+            ctx.save();
+            ctx.translate(fx, fy);
+            ctx.rotate(Math.sin(swayAngle) * 0.08);
             ctx.drawImage(
-              flowerSprites[phase],
-              fx - MATURE_FLOWER_SPRITE_ORIGIN,
-              fy - MATURE_FLOWER_SPRITE_BASELINE
+              flowerSprite,
+              -MATURE_FLOWER_SPRITE_ORIGIN,
+              -MATURE_FLOWER_SPRITE_BASELINE
             );
+            ctx.restore();
             if (typeof themeManager.activeTheme?.drawFlowerHalo === 'function') {
               ctx.save();
               ctx.translate(fx, fy - 14);

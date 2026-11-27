@@ -229,6 +229,10 @@ export const ICONS = {
     <circle cx="18" cy="4" r="2" fill="#F59E0B"/>
   </svg>`,
 
+  subsoloDev: `<svg class="subsolo-svg-icon icon-dev" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M14.7 6.3L17.7 9.3L8.3 18.7C7.9 19.1 7.3 19.3 6.7 19.3H4.7V17.3C4.7 16.7 4.9 16.1 5.3 15.7L14.7 6.3Z" fill="#581C87" stroke="#A855F7" stroke-width="1.8" stroke-linejoin="round"/>
+    <circle cx="17.5" cy="6.5" r="3.5" stroke="#C084FC" stroke-width="1.6"/>
+  </svg>`
 };
 
 export function getIcon(name, fallback = '') {

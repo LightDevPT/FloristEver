@@ -234,8 +234,8 @@ export const GOLDEN_AUTUMN_THEME = Object.freeze({
     softBlue: '#BFD8C4',
     plumText: '#3B2218'
   }),
-  // 15 out → 20 nov (a data atual cai dentro da janela)
-  recurringWindow: Object.freeze({ start: '10-15', end: '11-20' }),
+  // Automático até ao início do inverno europeu.
+  recurringWindow: Object.freeze({ start: '10-15', end: '12-20' }),
   palette: Object.freeze({
     cream: '#FFF3DE',
     grassLight: '#C9D98A',

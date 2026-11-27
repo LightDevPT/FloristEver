@@ -1,4 +1,4 @@
-export const CURRENT_SAVE_SCHEMA_VERSION = 1;
+export const CURRENT_SAVE_SCHEMA_VERSION = 2;
 
 export function migrateSaveData(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -15,5 +15,14 @@ export function migrateSaveData(data) {
     );
   }
 
-  return { ...data, schemaVersion };
+  let migrated = { ...data, schemaVersion };
+  if (schemaVersion === 1) {
+    migrated = {
+      ...migrated,
+      schemaVersion: 2,
+      appliedCampaignRewardIds: [],
+      lastBackupImportId: null
+    };
+  }
+  return migrated;
 }

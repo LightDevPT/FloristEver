@@ -214,10 +214,10 @@ export class HudManager {
     });
   }
 
-  showToast(message, iconKey = 'flower') {
+  showToast(message, iconKey = 'flower', variant = 'default') {
     if (!this.toastContainer) return;
     const toast = document.createElement('div');
-    toast.className = 'toast-item';
+    toast.className = `toast-item${variant === 'achievement' ? ' is-achievement' : ''}`;
     const iconSvg = getIcon(iconKey, getIcon('flower'));
     toast.innerHTML = `<span class="toast-icon">${iconSvg}</span><span>${message}</span>`;
     this.toastContainer.appendChild(toast);
@@ -226,7 +226,7 @@ export class HudManager {
       toast.style.opacity = '0';
       toast.style.transform = 'translateX(40px)';
       setTimeout(() => toast.remove(), 350);
-    }, 3200);
+    }, variant === 'achievement' ? 5200 : 3200);
   }
 
   setInteractionPrompt(visible, text = 'Atender Cliente') {

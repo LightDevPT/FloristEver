@@ -1,5 +1,5 @@
 // FloristEver - Música ambiente e efeitos sonoros do jardim
-const BACKGROUND_MUSIC_PATH = './musicas/TrilhaSonara-defundo.ogg';
+const BACKGROUND_MUSIC_PATH = './musicas/TrilhaSonara-defundo.mp3';
 
 export class SoundController {
   constructor() {

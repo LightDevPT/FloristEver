@@ -74,6 +74,10 @@ export class SecretCustomerManager {
       countersign,
       isSatisfied: false
     };
+    console.log('[VENDA-DEBUG] comprador gerado', {
+      order: { ...this.activeCustomer.order },
+      cofre: { ...this.subsolo.data.cofre }
+    });
   }
 
   updateActiveCustomer(dt, isSurfaceActive) {
@@ -114,18 +118,55 @@ export class SecretCustomerManager {
    * Verifica se o jogador clicou no cliente secreto para atendimento manual.
    */
   checkPlayerInteraction(worldX, worldY) {
-    if (!this.activeCustomer || this.activeCustomer.state === 'leaving') return false;
-    const dist = distance(worldX, worldY, this.activeCustomer.x, this.activeCustomer.y);
-    if (dist <= 35) {
-      if (this.activeCustomer.state === 'waiting') {
-        this.openSecretTradeModal();
-      } else {
-        this.tradeRequested = true;
-        this.game.hud?.showToast('O cliente está a caminho do balcão. A transação abrirá quando chegar.', 'check');
-      }
-      return true;
+    if (!this.activeCustomer || this.activeCustomer.state === 'leaving') {
+      console.log('[VENDA-DEBUG] clique ignorado: comprador inexistente ou a sair', {
+        activeCustomer: Boolean(this.activeCustomer),
+        state: this.activeCustomer?.state
+      });
+      return false;
     }
+    const dist = distance(worldX, worldY, this.activeCustomer.x, this.activeCustomer.y);
+    console.log('[VENDA-DEBUG] teste do hitbox', {
+      click: { x: worldX, y: worldY },
+      customer: { x: this.activeCustomer.x, y: this.activeCustomer.y },
+      distance: dist
+    });
+    if (dist <= 35) {
+      return this.requestTrade();
+    }
+    console.log('[VENDA-DEBUG] clique fora do hitbox; venda não iniciada');
     return false;
+  }
+
+  interactAtCounter() {
+    const customer = this.activeCustomer;
+    console.log('[VENDA-DEBUG] ação no balcão', {
+      activeCustomer: Boolean(customer),
+      state: customer?.state,
+      order: customer?.order
+    });
+    if (!customer || customer.state === 'leaving') {
+      console.log('[VENDA-DEBUG] ação no balcão ignorada: sem comprador disponível');
+      return false;
+    }
+    return this.requestTrade();
+  }
+
+  requestTrade() {
+    if (this.activeCustomer.state === 'waiting') {
+      console.log('[VENDA-DEBUG] pedido de venda aberto', {
+        order: { ...this.activeCustomer.order },
+        cofre: { ...this.subsolo.data.cofre }
+      });
+      this.openSecretTradeModal();
+    } else {
+      this.tradeRequested = true;
+      console.log('[VENDA-DEBUG] venda marcada; comprador ainda a caminho', {
+        state: this.activeCustomer.state
+      });
+      this.game.hud?.showToast('O cliente está a caminho do balcão. A transação abrirá quando chegar.', 'check');
+    }
+    return true;
   }
 
   openSecretTradeModal() {
@@ -134,6 +175,16 @@ export class SecretCustomerManager {
     const prodConfig = SUBSOLO_PRODUCTS[order.productId] || SUBSOLO_PRODUCTS.ramo;
     const inCofre = this.subsolo.data.cofre[order.productId] || 0;
     const canAffordStock = inCofre >= order.quantity;
+    console.log('[VENDA-DEBUG] modal de venda', {
+      productId: order.productId,
+      quantity: order.quantity,
+      quantityType: typeof order.quantity,
+      inCofre,
+      inCofreType: typeof this.subsolo.data.cofre[order.productId],
+      stockAvailable: canAffordStock,
+      order: { ...order },
+      cofre: { ...this.subsolo.data.cofre }
+    });
     const countersign = this.activeCustomer.countersign;
     const assist = this.subsolo.data.conteudoSecreto.ajudaCodigo;
 
@@ -146,7 +197,7 @@ export class SecretCustomerManager {
     if (!modal) {
       modal = document.createElement('div');
       modal.id = 'modal-secret-trade';
-      modal.className = 'modal-overlay hidden';
+      modal.className = 'modal-backdrop hidden';
       document.body.appendChild(modal);
     }
 
@@ -168,7 +219,7 @@ export class SecretCustomerManager {
         <div class="secret-trade-quote-box">
           <span class="transmission-label">TRANSMISSÃO INTERCETADA:</span>
           <div class="quote-text">"${order.phrase}"</div>
-          ${assist ? `<div class="quote-assist-pill"><span>Pedido decifrado: <strong>${order.quantity}x ${prodConfig.name}</strong></span></div>` : ''}
+          ${assist ? `<div class="quote-assist-pill">${ICONS.subsoloDev} <span>Pedido decifrado: <strong>${order.quantity}x ${prodConfig.name}</strong></span></div>` : ''}
         </div>
 
         ${countersign ? `
@@ -223,7 +274,9 @@ export class SecretCustomerManager {
 
     document.getElementById('btn-submit-secret-trade').onclick = () => {
       const packagingId = document.getElementById('secret-trade-packaging').value;
+      console.log('[VENDA-DEBUG] submissão da venda', { order, packagingId });
       const res = this.subsolo.completeSale(order, packagingId);
+      console.log('[VENDA-DEBUG] resultado da venda', res);
       if (res.success) {
         if (this.game.soundManager) this.game.soundManager.playCoin?.();
         this.game.hud.showToast(`Venda concluída! +${res.revenue} moedas (+${res.xp} Respeito)`, 'coin');
@@ -251,59 +304,164 @@ export class SecretCustomerManager {
       return;
     }
 
-    ctx.save();
-    // Capuz e roupa escura gasta
-    ctx.fillStyle = '#32373B';
-    ctx.beginPath();
-    ctx.ellipse(c.x, c.y - 12, 11, 14, 0, 0, Math.PI * 2);
-    ctx.fill();
+    this.drawSecretCustomer(ctx, c);
+  }
 
-    // Rosto oculto na penumbra
-    ctx.fillStyle = '#C89D7C';
-    ctx.beginPath();
-    ctx.arc(c.x + 3, c.y - 14, 4, 0, Math.PI * 2);
-    ctx.fill();
+/*
+  Cliente secreto (redesenhado)
 
-    // Capuz sobreposto
-    ctx.fillStyle = '#262A2D';
-    ctx.beginPath();
-    ctx.arc(c.x, c.y - 16, 10, Math.PI * 0.8, Math.PI * 2.2);
-    ctx.fill();
+  Uso:
+    this.drawSecretCustomer(ctx, { x: c.x, y: c.y, dir: 1, t: tempoEmSegundos });
 
-    // Corpo e casaco com remendos
-    ctx.fillStyle = '#3A4247';
-    ctx.fillRect(c.x - 9, c.y - 2, 18, 22);
+  c.x, c.y  = mesma âncora da versão antiga
+  c.dir     = 1 (a olhar para a direita) ou -1 (esquerda). Opcional, por omissão 1.
+  c.t       = tempo em segundos, anima a respiração, os pés e o bloco de notas. Opcional.
+*/
+  drawSecretCustomer(ctx, c) {
+  const dir = c.dir || 1;
+  const t = c.t || 0;
+  const bob = Math.sin(t * 2.4) * 0.7;           // respiração
+  const step = Math.sin(t * 2.4);                // balanço dos pés
+  const note = Math.sin(t * 1.2) > 0.6 ? -1 : 0; // levanta o bloco de vez em quando
 
-    // Remendo no casaco
-    ctx.fillStyle = '#735A4A';
-    ctx.fillRect(c.x - 5, c.y + 4, 5, 5);
+  ctx.save();
+  ctx.translate(c.x, c.y);
+  ctx.scale(dir, 1);
 
-    // Balão de fala quando está à espera
-    if (c.state === 'waiting') {
-      ctx.fillStyle = '#222629';
-      ctx.strokeStyle = '#5E8C8A';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.roundRect(c.x - 16, c.y - 48, 32, 22, 6);
-      ctx.fill();
-      ctx.stroke();
+  // Sombra no chão
+  ctx.fillStyle = 'rgba(0,0,0,0.22)';
+  ctx.beginPath(); ctx.ellipse(0, 22, 11, 3, 0, 0, Math.PI * 2); ctx.fill();
 
-      // Símbolo discreto (folha estilizada, não flores normais)
-      ctx.fillStyle = '#B56BFF';
-      ctx.strokeStyle = '#E9D5FF';
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.moveTo(c.x, c.y - 41);
-      ctx.quadraticCurveTo(c.x + 11, c.y - 36, c.x, c.y - 26);
-      ctx.quadraticCurveTo(c.x - 10, c.y - 34, c.x, c.y - 41);
-      ctx.fill();
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(c.x - 5, c.y - 34);
-      ctx.lineTo(c.x + 5, c.y - 33);
-      ctx.stroke();
-    }
+  // Pernas e sapatos
+  ctx.fillStyle = '#2A2E32';
+  ctx.fillRect(-6, 15, 5, 6 - step * 0.5);
+  ctx.fillRect(1, 15, 5, 6 + step * 0.5);
+  ctx.fillStyle = '#16181A';
+  ctx.fillRect(-7, 20.5 - step * 0.5, 7, 2.5);
+  ctx.fillRect(1, 20.5 + step * 0.5, 7, 2.5);
 
-    ctx.restore();
+  ctx.save();
+  ctx.translate(0, bob * 0.5);
+
+  // Casaco (trench): ombros estreitos, bainha larga
+  ctx.fillStyle = '#3A4247';
+  ctx.beginPath();
+  ctx.moveTo(-8, -4);
+  ctx.lineTo(8, -4);
+  ctx.lineTo(11, 18);
+  ctx.lineTo(-11, 18);
+  ctx.closePath();
+  ctx.fill();
+
+  // Lado de sombra do casaco
+  ctx.fillStyle = '#313840';
+  ctx.beginPath();
+  ctx.moveTo(-8, -4); ctx.lineTo(-2, -4); ctx.lineTo(-3, 18); ctx.lineTo(-11, 18);
+  ctx.closePath(); ctx.fill();
+
+  // Abertura central e botões
+  ctx.fillStyle = '#242A2E';
+  ctx.fillRect(-0.5, -3, 1, 21);
+  ctx.fillStyle = '#8A9298';
+  ctx.fillRect(1.5, 0, 1.4, 1.4);
+  ctx.fillRect(1.5, 5, 1.4, 1.4);
+
+  // Cinto com fivela
+  ctx.fillStyle = '#735A4A';
+  ctx.fillRect(-10, 8, 20, 2.5);
+  ctx.fillStyle = '#C9A24D';
+  ctx.fillRect(-1.5, 7.8, 3, 3);
+
+  // Remendo no casaco
+  ctx.fillStyle = '#735A4A';
+  ctx.fillRect(-7, 12, 4, 4);
+  ctx.strokeStyle = '#A88A74';
+  ctx.lineWidth = 0.5;
+  ctx.setLineDash([1, 1]);
+  ctx.strokeRect(-7, 12, 4, 4);
+  ctx.setLineDash([]);
+
+  // Braço de trás
+  ctx.fillStyle = '#2F363B';
+  ctx.fillRect(-12, -2, 4, 13);
+  ctx.fillStyle = '#C89D7C';
+  ctx.fillRect(-12, 10.5, 4, 3);
+
+  // Braço da frente a segurar o bloco de notas
+  ctx.fillStyle = '#434C52';
+  ctx.beginPath();
+  ctx.moveTo(8, -3); ctx.lineTo(12, -1); ctx.lineTo(13, 6); ctx.lineTo(8, 6);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#C89D7C';
+  ctx.fillRect(9, 5.5, 4, 2.5);
+
+  // Bloco de notas
+  ctx.save();
+  ctx.translate(0, note);
+  ctx.fillStyle = '#DCCFB0';
+  ctx.fillRect(11, 1, 6, 8);
+  ctx.fillStyle = '#9C8E70';
+  ctx.fillRect(11, 1, 6, 1.5);
+  ctx.fillRect(12, 4, 4, 0.7);
+  ctx.fillRect(12, 6, 3, 0.7);
+  ctx.restore();
+
+  // Gola levantada
+  ctx.fillStyle = '#2B3236';
+  ctx.beginPath();
+  ctx.moveTo(-8, -4); ctx.lineTo(-4, -9); ctx.lineTo(-1, -4);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(8, -4); ctx.lineTo(4, -9); ctx.lineTo(1, -4);
+  ctx.closePath(); ctx.fill();
+
+  // Pescoço
+  ctx.fillStyle = '#B88C6E';
+  ctx.fillRect(-2, -8, 4, 4);
+
+  // Capuz (parte de trás, volume)
+  ctx.fillStyle = '#262A2D';
+  ctx.beginPath(); ctx.ellipse(-1, -17, 11, 12, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Frente do capuz
+  ctx.fillStyle = '#32373B';
+  ctx.beginPath(); ctx.ellipse(1, -16, 9.5, 11, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Abertura do capuz com sombra
+  ctx.fillStyle = '#1B1E20';
+  ctx.beginPath(); ctx.ellipse(3.5, -15, 6.5, 7.5, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Rosto
+  ctx.fillStyle = '#C89D7C';
+  ctx.beginPath(); ctx.ellipse(4, -14.5, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Sombra da testa (capuz sobre o rosto)
+  ctx.fillStyle = 'rgba(30,24,20,0.45)';
+  ctx.beginPath(); ctx.ellipse(4, -18.5, 5.2, 2.6, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Óculos escuros
+  ctx.fillStyle = '#0F1112';
+  ctx.fillRect(1, -16, 4, 2.6);
+  ctx.fillRect(6, -16, 3.5, 2.6);
+  ctx.fillRect(4.5, -15.4, 1.8, 0.7);
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillRect(1.6, -15.7, 1, 0.8);
+  ctx.fillRect(6.6, -15.7, 1, 0.8);
+
+  // Nariz e boca
+  ctx.fillStyle = '#A8795C';
+  ctx.fillRect(8.4, -14, 1.4, 1.8);
+  ctx.fillStyle = '#7D4F3A';
+  ctx.fillRect(5, -10.8, 3.5, 0.8);
+
+  // Rebordo do capuz
+  ctx.strokeStyle = '#4A5258';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.ellipse(3.5, -15, 7, 8, 0, Math.PI * 0.55, Math.PI * 1.9);
+  ctx.stroke();
+
+  ctx.restore();
+  ctx.restore();
   }
 }

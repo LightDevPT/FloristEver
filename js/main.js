@@ -5,13 +5,18 @@
 // ========================================================
 
 import { state } from './state.js';
-import { LUMINOUS_GARDEN_UNLOCK_LEVEL, themeManager, THEME_PREFERENCES } from './theme-manager.js';
+import { getThemeUnlockLevel, themeManager, THEME_PREFERENCES } from './theme-manager.js';
 import {
   getDayNightLighting,
   MAX_NIGHT_OVERLAY_ALPHA
 } from './day-night.js';
 import { soundManager } from './audio.js';
 import { assetManager } from './assets.js';
+import {
+  BETA_STATUE_SCALE,
+  betaStatueHitbox,
+  drawBetaStatue
+} from './statue-beta.js';
 import { ParticleSystem, PALETTE, distance, clamp, lerp, getCanvasPixelRatio } from './utils.js';
 import { Player } from './entities/player.js';
 import { FieldManager } from './entities/field.js';
@@ -26,6 +31,12 @@ import { TutorialManager } from './ui/tutorial.js';
 import { GameTutorial } from './ui/game-tutorial.js';
 import { CinematicManager } from './ui/cinematic-manager.js';
 import { AccountUi } from './ui/account.js';
+import { PlayerProfileUi } from './ui/player-profile.js';
+import {
+  applyLocalFullTestProfile,
+  DeveloperToolsPanel,
+  isLocalFullTestMode
+} from './ui/developer-tools.js';
 import { HudCustomizer } from './ui/hud-customizer.js';
 import {
   ONBOARDING_COMPLETED_KEY,
@@ -40,6 +51,10 @@ import { SceneManager, SCENE_STATES } from './subsolo/scene-manager.js';
 import { SubsoloRenderer } from './subsolo/subsolo-renderer.js';
 import { SubsoloUI } from './subsolo/subsolo-ui.js';
 import { SecretCustomerManager } from './subsolo/secret-customer-manager.js';
+import { GAME_VERSION } from './config/game-version.js';
+import { ACTIVE_CAMPAIGNS, TRUSTED_CAMPAIGN_KEYS } from './campaign-config.js';
+import { CampaignEngine } from './campaign-engine.js';
+import { ActivePlayTracker, PlayerDataStore } from './player-data-store.js';
 
 const MOBILE_CONTROL_LAYOUTS = new Set(['left', 'right']);
 const MOBILE_CONTROL_SIZES = new Set(['small', 'standard', 'large']);
@@ -134,7 +149,7 @@ function renderTermsDocument(markdown, container) {
 
 class Game {
   constructor() {
-    this.sessionTestMode = false;
+    this.sessionTestMode = isLocalFullTestMode(window.location);
     state.sessionOnlyMode = this.sessionTestMode;
     this.canvas = document.getElementById('game-canvas');
     this.ctx = this.canvas.getContext('2d');
@@ -162,12 +177,37 @@ class Game {
       }
       this.shopUi.openChallenges();
     };
+    this.developerTools = new DeveloperToolsPanel(state, this.hud, () => this.accountUi?.client.user, this);
+    this.betaStatueClaimed = false;
+    this.betaStatueDecoration = null;
+    this.betaStatuePlacementPending = false;
+    this.playerDataStore = new PlayerDataStore();
+    this.campaignEngine = new CampaignEngine({
+      store: this.playerDataStore,
+      gameState: state,
+      campaigns: ACTIVE_CAMPAIGNS,
+      trustedKeys: TRUSTED_CAMPAIGN_KEYS
+    });
+    this.playerProfileUi = new PlayerProfileUi(
+      this.playerDataStore,
+      this.campaignEngine,
+      state,
+      this.hud,
+      () => this.handleBetaStatueClaimed()
+    );
     this.accountUi = new AccountUi(state, this.hud, {
-      disableSync: false
+      disableSync: this.sessionTestMode,
+      accountDisabled: true,
+      playerDataStore: this.playerDataStore,
+      playerProfileUi: this.playerProfileUi,
+      onBackupImported: () => this.refreshBetaProfileState(),
+      onAccountChange: () => this.developerTools.refreshAccess()
     });
     this.onboardingAccountUi = new AccountUi(state, this.hud, {
       hostId: 'onboarding-account-panel',
       enableAutosync: false,
+      enableBackup: false,
+      accountDisabled: true,
       disableSync: this.sessionTestMode,
       onBeforeAuthenticate: () => this.acceptOnboardingTerms(),
       onAuthenticated: () => this.finishOnboarding()
@@ -264,12 +304,15 @@ class Game {
     this.collisionPlotCount = -1;
     this.collisionShopExpansion = -1;
     this.collisionDecorSignature = '';
+    this.cachedTerrainCanvas = null;
+    this.cachedTerrainKey = '';
 
     // Tempo e ciclo dia/noite muito suave
     this.gameTime = 0;
     this.challengeRefreshTimer = 0;
     this.projectRefreshTimer = 0;
     this.indicatorRefreshTimer = 0;
+    this.subsoloUpdateTimer = 0;
     this.lastMinimapDrawAt = 0;
     this.lastFrameTime = performance.now();
     this.lastAnimationFrameTime = this.lastFrameTime;
@@ -302,6 +345,10 @@ class Game {
     const loadResult = state.load();
     this.hasLoadedProgress = loadResult !== null;
     state.subscribe((event) => {
+      if (event === 'state_loaded' || event === 'game_reset') {
+        this.syncBetaStatueDecoration();
+        this.updateBetaDecorationPanel();
+      }
       if ([
         'state_loaded',
         'plot_unlocked',
@@ -313,6 +360,13 @@ class Game {
         this.cachedPathPlots = null;
       }
     });
+    if (this.sessionTestMode) {
+      applyLocalFullTestProfile(state);
+      this.hud.showToast(
+        'Modo de teste completo ativo: terrenos, flores, melhorias e zonas desbloqueados. O progresso de teste não será guardado.',
+        'check'
+      );
+    }
     if (state.saveBlocked) {
       this.hud.showToast(
         'O progresso não pôde ser carregado. As gravações e a sincronização foram bloqueadas para proteger o save.',
@@ -417,7 +471,7 @@ class Game {
       ? 1.0
       : state.settings.graphicsQuality === 'normal'
       ? 1.25
-      : 2.0;
+      : 1.5;
     const requestedRatio = Math.min(window.devicePixelRatio || 1, maxPixelRatio);
     const pixelRatio = getCanvasPixelRatio(width, height, requestedRatio);
     const pixelWidth = Math.round(width * pixelRatio);
@@ -563,14 +617,34 @@ class Game {
       if (event.target.closest('button')) setHudMenuOpen(false);
     });
     const decorationToggle = document.getElementById('btn-toggle-decoration-mode');
+    this.betaDecorationPanel = document.getElementById('beta-statue-decoration-panel');
+    this.betaDecorationPlaceButton = document.getElementById('btn-place-beta-statue');
+    this.betaDecorationStatus = document.getElementById('beta-statue-decoration-status');
+    const betaPreviewCanvas = document.getElementById('beta-statue-decoration-preview');
+    const betaPreviewContext = betaPreviewCanvas?.getContext('2d');
+    if (betaPreviewContext && betaPreviewCanvas) {
+      drawBetaStatue(
+        betaPreviewContext,
+        betaPreviewCanvas.width / 2,
+        betaPreviewCanvas.height - 8,
+        { scale: 0.3, time: 0 }
+      );
+    }
+    this.betaDecorationPlaceButton?.addEventListener('click', () => {
+      if (!this.decorationMode || !this.betaStatueClaimed) return;
+      this.betaStatuePlacementPending = true;
+      this.updateBetaDecorationPanel();
+    });
     decorationToggle?.addEventListener('click', () => {
       this.decorationMode = !this.decorationMode;
+      if (!this.decorationMode) this.betaStatuePlacementPending = false;
       decorationToggle.setAttribute('aria-pressed', String(this.decorationMode));
       decorationToggle.setAttribute(
         'aria-label',
         this.decorationMode ? 'Desativar modo de decoração' : 'Ativar modo de decoração'
       );
       document.body.classList.toggle('garden-decoration-mode', this.decorationMode);
+      this.updateBetaDecorationPanel();
       if (this.decorationMode) {
         document.getElementById('modal-settings')?.classList.add('hidden');
         document.getElementById('btn-open-settings')?.focus();
@@ -608,7 +682,9 @@ class Game {
       if (this.sceneManager?.isSubsoloActive()) {
         if (this.decorationMode) {
           this.decorationMode = false;
+          this.betaStatuePlacementPending = false;
           document.body.classList.remove('garden-decoration-mode');
+          this.updateBetaDecorationPanel();
         }
 
         const worldPosition = this.screenToWorld(screenX, screenY);
@@ -650,6 +726,40 @@ class Game {
       const worldPos = this.screenToWorld(screenX, screenY);
 
       if (this.decorationMode) {
+        if (this.betaStatuePlacementPending) {
+          if (!this.state.setGardenBetaStatuePosition(worldPos.x, worldPos.y)) {
+            this.hud.showToast('Não foi possível guardar a posição da estátua.', 'error');
+            return;
+          }
+          this.betaStatuePlacementPending = false;
+          this.syncBetaStatueDecoration();
+          this.updateBetaDecorationPanel();
+          this.hud.showToast('Estátua colocada no jardim. Podes arrastá-la para a reposicionar.', 'check');
+          return;
+        }
+        const statueClickBounds = this.betaStatueDecoration
+          ? {
+              left: this.betaStatueDecoration.x - 153,
+              top: this.betaStatueDecoration.y - 234,
+              right: this.betaStatueDecoration.x + 153,
+              bottom: this.betaStatueDecoration.y
+            }
+          : null;
+        if (
+          statueClickBounds
+          && worldPos.x >= statueClickBounds.left
+          && worldPos.x <= statueClickBounds.right
+          && worldPos.y >= statueClickBounds.top
+          && worldPos.y <= statueClickBounds.bottom
+        ) {
+          this.decorationDrag = {
+            kind: 'betaStatue',
+            original: { x: this.betaStatueDecoration.x, y: this.betaStatueDecoration.y },
+            pointerId: e.pointerId
+          };
+          this.canvas.setPointerCapture(e.pointerId);
+          return;
+        }
         const movableIndices = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13];
         const nearest = movableIndices
           .map((index) => ({ index, decor: this.mapDecor[index] }))
@@ -661,6 +771,7 @@ class Game {
           .sort((first, second) => first.distance - second.distance)[0];
         if (nearest) {
           this.decorationDrag = {
+            kind: 'garden',
             index: nearest.index,
             original: { x: nearest.decor.x, y: nearest.decor.y },
             pointerId: e.pointerId
@@ -699,7 +810,10 @@ class Game {
       if (!this.decorationDrag || event.pointerId !== this.decorationDrag.pointerId) return;
       const rect = this.canvas.getBoundingClientRect();
       const worldPos = this.screenToWorld(event.clientX - rect.left, event.clientY - rect.top);
-      const decor = this.mapDecor[this.decorationDrag.index];
+      const decor = this.decorationDrag.kind === 'betaStatue'
+        ? this.betaStatueDecoration
+        : this.mapDecor[this.decorationDrag.index];
+      if (!decor) return;
       decor.x = clamp(worldPos.x, 40, 2260);
       decor.y = clamp(worldPos.y, 40, 1160);
     });
@@ -707,13 +821,19 @@ class Game {
       if (!this.decorationDrag || event.pointerId !== this.decorationDrag.pointerId) return;
       const drag = this.decorationDrag;
       this.decorationDrag = null;
-      const decor = this.mapDecor[drag.index];
+      const decor = drag.kind === 'betaStatue'
+        ? this.betaStatueDecoration
+        : this.mapDecor[drag.index];
+      if (!decor) return;
       if (event.type === 'pointercancel') {
         decor.x = drag.original.x;
         decor.y = drag.original.y;
         return;
       }
-      if (!this.state.setGardenDecorationPosition(drag.index, decor.x, decor.y)) {
+      const saved = drag.kind === 'betaStatue'
+        ? this.state.setGardenBetaStatuePosition(decor.x, decor.y)
+        : this.state.setGardenDecorationPosition(drag.index, decor.x, decor.y);
+      if (!saved) {
         decor.x = drag.original.x;
         decor.y = drag.original.y;
         this.hud.showToast('Não foi possível guardar a nova posição. A decoração foi reposta.', 'error');
@@ -883,6 +1003,11 @@ class Game {
       return;
     }
 
+    if (this.getNearbyBetaStatue()) {
+      this.hud.showToast('Obrigado, beta tester, por cuidares do jardim desde o primeiro dia.', 'flower');
+      return;
+    }
+
     // 1. Tenta atender cliente no balcão se estiver próximo
     const counterCenter = {
       x: this.counter.x + this.counter.width / 2,
@@ -891,6 +1016,7 @@ class Game {
     const distToCounter = distance(this.player.x, this.player.y, counterCenter.x, counterCenter.y);
 
     if (distToCounter < 95) {
+      if (this.secretCustomerManager?.interactAtCounter()) return;
       const served = this.customerManager.serveWaitingCustomer();
       if (served) return;
     }
@@ -963,6 +1089,67 @@ class Game {
     return this.mapDecor
       .filter((decor) => decor.type === 'bench')
       .find((bench) => distance(this.player.x, this.player.y, bench.x, bench.y + 8) < 58) || null;
+  }
+
+  getNearbyBetaStatue() {
+    if (!this.betaStatueDecoration || this.sceneManager?.isSubsoloActive()) return false;
+    const { x, y, w, h } = betaStatueHitbox(
+      this.betaStatueDecoration.x,
+      this.betaStatueDecoration.y,
+      BETA_STATUE_SCALE
+    );
+    return this.player.x >= x
+      && this.player.x <= x + w
+      && this.player.y >= y
+      && this.player.y <= y + h;
+  }
+
+  syncBetaStatueDecoration() {
+    const position = this.state.gardenBetaStatuePosition;
+    this.betaStatueDecoration = this.betaStatueClaimed && position
+      ? { type: 'betaStatue', x: position.x, y: position.y }
+      : null;
+  }
+
+  updateBetaDecorationPanel() {
+    if (!this.betaDecorationPanel) return;
+    const visible = this.decorationMode && this.betaStatueClaimed;
+    this.betaDecorationPanel.classList.toggle('hidden', !visible);
+    if (this.betaDecorationStatus) {
+      this.betaDecorationStatus.textContent = this.betaStatuePlacementPending
+        ? 'Clica no local do jardim onde queres colocar a estátua.'
+        : this.betaStatueDecoration
+          ? 'Arrasta a estátua no jardim ou escolhe Mover estátua.'
+          : 'Escolhe Colocar no jardim e clica no local pretendido.';
+    }
+    if (this.betaDecorationPlaceButton) {
+      this.betaDecorationPlaceButton.textContent = this.betaStatuePlacementPending
+        ? 'Seleciona um local no jardim'
+        : this.betaStatueDecoration ? 'Mover estátua' : 'Colocar no jardim';
+    }
+  }
+
+  handleBetaStatueClaimed() {
+    this.betaStatueClaimed = true;
+    this.syncBetaStatueDecoration();
+    this.updateBetaDecorationPanel();
+  }
+
+  async refreshBetaProfileState() {
+    const record = await this.playerDataStore.readRecord();
+    this.betaStatueClaimed = record.betaStatueClaimed;
+    this.syncBetaStatueDecoration();
+    this.updateBetaDecorationPanel();
+  }
+
+  async notifyBetaTagGranted() {
+    if (!await this.playerDataStore.consumeBetaNotification()) return;
+    await this.playerProfileUi.refresh();
+    this.hud.showToast(
+      'Conquista BETA desbloqueada! Abre Conta para ver e resgatar a estátua comemorativa.',
+      'flower',
+      'achievement'
+    );
   }
 
   getNearbyZoneFinding() {
@@ -1209,6 +1396,7 @@ class Game {
     this.openSettings = () => {
       if (!modalSettings) return;
       soundManager.playClick();
+      this.developerTools.refreshAccess();
       this.openSettingsPanel('general');
     };
 
@@ -1241,6 +1429,18 @@ class Game {
 
     if (openBtn && modalSettings) {
       openBtn.addEventListener('click', () => this.openSettings());
+
+      const devBtn = document.getElementById('btn-open-dev-tools');
+      if (devBtn) {
+        devBtn.addEventListener('click', () => {
+          soundManager.playClick();
+          this.developerTools.refreshAccess();
+          this.openSettingsPanel('system');
+          setTimeout(() => {
+            document.getElementById('developer-tools-panel')?.scrollIntoView({ behavior: 'smooth' });
+          }, 50);
+        });
+      }
 
       modalSettings.addEventListener('click', (e) => {
         if (e.target.closest('[data-close]') || e.target === modalSettings) {
@@ -1456,6 +1656,31 @@ class Game {
 
   setupGraphicsQuality() {
     const inputs = [...document.querySelectorAll('input[name="graphics-quality"]')];
+    const detectRecommendedQuality = () => {
+      const cores = Number.isFinite(navigator.hardwareConcurrency)
+        ? navigator.hardwareConcurrency
+        : 0;
+      const memory = Number.isFinite(navigator.deviceMemory)
+        ? navigator.deviceMemory
+        : 0;
+      const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+      const smallViewport = Math.min(window.innerWidth, window.innerHeight) < 700;
+
+      if (coarsePointer || smallViewport || (cores > 0 && cores <= 4) || (memory > 0 && memory <= 4)) {
+        return 'low';
+      }
+      if (!coarsePointer && cores >= 12 && memory >= 8) {
+        return 'ultra';
+      }
+      return 'normal';
+    };
+
+    if (state.settings.graphicsQualityMode !== 'manual') {
+      state.settings.graphicsQuality = detectRecommendedQuality();
+      state.settings.graphicsQualityMode = 'auto';
+      state.save();
+    }
+
     const apply = (quality) => {
       const normalized = GRAPHICS_QUALITIES.has(quality) ? quality : 'normal';
       state.settings.graphicsQuality = normalized;
@@ -1470,6 +1695,7 @@ class Game {
     apply(state.settings.graphicsQuality);
     inputs.forEach((input) => input.addEventListener('change', () => {
       if (!input.checked || !GRAPHICS_QUALITIES.has(input.value)) return;
+      state.settings.graphicsQualityMode = 'manual';
       apply(input.value);
       state.save();
     }));
@@ -1483,34 +1709,49 @@ class Game {
     const eventPill = document.getElementById('theme-event-pill');
     const reducedEffects = document.getElementById('theme-reduced-effects');
     const saveError = document.getElementById('theme-save-error');
-    const luminousInput = document.querySelector('input[name="theme-preference"][value="luminous"]');
-    const luminousHelp = document.getElementById('theme-luminous-help');
     const performanceNotice = document.getElementById('theme-performance-notice');
-    const padraoRemasterOption = document.getElementById('theme-option-padrao-remaster');
     const preferenceInputs = [...document.querySelectorAll('input[name="theme-preference"]')];
+    const unlockableThemes = [
+      {
+        preference: 'luminous',
+        helpId: 'theme-luminous-help',
+        unlockedDescription: 'Noite azul-petróleo, flores luminosas e ambiente sereno.'
+      },
+      {
+        preference: 'jardim_coracoes',
+        helpId: 'theme-hearts-help',
+        unlockedDescription: 'Blush, sálvia e detalhes em ouro-rosa.'
+      },
+      {
+        preference: 'festival_cores',
+        helpId: 'theme-festival-help',
+        unlockedDescription: 'Ativa o tema festivo em qualquer altura.'
+      }
+    ];
     if (!reducedEffects || !saveError) return;
 
     this.refreshThemeSettings = () => {
       const preference = themeManager.preference;
-      padraoRemasterOption?.classList.toggle(
-        'hidden',
-        window.floristEverBuildInfo?.devMode !== true
-      );
       preferenceInputs.forEach((input) => {
         input.checked = input.value === preference;
         input.closest('.theme-option')?.classList.toggle('is-selected', input.checked);
       });
       reducedEffects.checked = state.settings.themeReducedEffects === true;
-      if (luminousInput) {
-        const unlocked = state.level >= LUMINOUS_GARDEN_UNLOCK_LEVEL;
-        luminousInput.disabled = !unlocked;
-        luminousInput.closest('.theme-option')?.classList.toggle('is-locked', !unlocked);
-        if (luminousHelp) {
-          luminousHelp.textContent = unlocked
-            ? 'Noite azul-petróleo, flores luminosas e ambiente sereno.'
-            : `Desbloqueia ao atingir o nível ${LUMINOUS_GARDEN_UNLOCK_LEVEL}.`;
+      unlockableThemes.forEach(({ preference: themePreference, helpId, unlockedDescription }) => {
+        const input = preferenceInputs.find((option) => option.value === themePreference);
+        const help = document.getElementById(helpId);
+        const unlockLevel = getThemeUnlockLevel(themePreference);
+        const unlocked = state.level >= unlockLevel;
+        if (input) {
+          input.disabled = !unlocked;
+          input.closest('.theme-option')?.classList.toggle('is-locked', !unlocked);
         }
-      }
+        if (help) {
+          help.textContent = unlocked
+            ? unlockedDescription
+            : `Desbloqueia ao atingir o nível ${unlockLevel}.`;
+        }
+      });
       performanceNotice?.classList.toggle('hidden', !themeManager.performanceFallback);
       saveError.classList.add('hidden');
     };
@@ -1619,7 +1860,38 @@ class Game {
   }
 
   startInitialExperience() {
+    if (!this.playerProfileStarted) {
+      this.playerProfileStarted = true;
+      void this.initializePlayerProfile();
+    }
     this.cinematicManager.playIfNeeded('floristever', () => this.gameTutorial.startIfNeeded());
+  }
+
+  async initializePlayerProfile() {
+    try {
+      await this.playerDataStore.recoverPendingBackupImport(state.lastBackupImportId);
+      await this.playerDataStore.ensureProfile(GAME_VERSION);
+      await this.refreshBetaProfileState();
+      this.playerPlayTracker = new ActivePlayTracker(this.playerDataStore, {
+        version: GAME_VERSION,
+        onBetaGranted: () => this.notifyBetaTagGranted(),
+        isGameplayReady: () => (
+          !this.cinematicManager?.isPlaying
+          && !this.gameTutorial?.isOpen()
+          && !this.subsoloUI?.tutorial?.isOpen()
+          && !this.hudCustomizer?.draft
+        )
+      });
+      this.playerPlayTracker.start();
+      await this.playerProfileUi.refresh();
+      await this.notifyBetaTagGranted();
+    } catch (error) {
+      console.error('Não foi possível iniciar o perfil offline do jogador:', error);
+      this.playerProfileUi.setStatus(
+        `O perfil offline não está disponível neste dispositivo. ${error.message || ''}`.trim(),
+        'error'
+      );
+    }
   }
 
   setupStartMenu() {
@@ -1936,13 +2208,7 @@ class Game {
       );
     };
     const handleOnline = () => {
-      showStatus('Ligação restabelecida. A verificar a sincronização do progresso...', 'online');
-      if (this.accountUi.client.accessToken) {
-        const sync = this.accountUi.client.user
-          ? this.accountUi.syncNow({ silent: true })
-          : this.accountUi.bootstrap();
-        sync.catch((error) => console.warn('Não foi possível retomar a sincronização:', error));
-      }
+      showStatus('Ligação restabelecida. O progresso continua guardado neste dispositivo.', 'online');
       window.clearTimeout(hideOnlineStatusTimer);
       hideOnlineStatusTimer = window.setTimeout(() => {
         if (navigator.onLine) status.classList.add('hidden');
@@ -1992,10 +2258,19 @@ class Game {
 
   // Loop Principal com Delta Time
   gameLoop(timestamp) {
+    if (document.hidden) {
+      this.lastAnimationFrameTime = timestamp;
+      this.lastFrameTime = timestamp;
+      this.renderAccumulatorMs = 0;
+      this.simulationAccumulator = 0;
+      requestAnimationFrame((t) => this.gameLoop(t));
+      return;
+    }
+
     const animationDeltaMs = Math.max(0, timestamp - this.lastAnimationFrameTime);
     this.lastAnimationFrameTime = timestamp;
     this.renderAccumulatorMs += animationDeltaMs;
-    const targetFrameMs = 1000 / 120;
+    const targetFrameMs = 1000 / 60;
     if (this.renderAccumulatorMs < targetFrameMs) {
       requestAnimationFrame((t) => this.gameLoop(t));
       return;
@@ -2008,7 +2283,8 @@ class Game {
     // Clamp para evitar saltos enormes quando o utilizador muda de separador
     if (dt > 0.1) dt = 0.1;
 
-    const monitorPerformance = false;
+    const monitorPerformance = this.developerTools?.isPerformanceHudEnabled();
+    const frameWorkStart = monitorPerformance ? performance.now() : 0;
     const canSimulate =
       !this.cinematicManager?.isPlaying
       && !this.gameTutorial?.isOpen()
@@ -2024,7 +2300,19 @@ class Game {
     } else {
       this.simulationAccumulator = 0;
     }
-    this.render();
+    if (canSimulate) {
+      const renderStart = monitorPerformance ? performance.now() : 0;
+      this.render();
+      if (monitorPerformance) {
+        const renderEnd = performance.now();
+        this.developerTools.recordPerformanceFrame(
+          timestamp,
+          renderStart - frameWorkStart,
+          renderEnd - renderStart,
+          this
+        );
+      }
+    }
 
     requestAnimationFrame((t) => this.gameLoop(t));
   }
@@ -2034,9 +2322,13 @@ class Game {
       this.ensurePlayerVisible();
     }
     this.sceneManager?.update(dt);
+    this.subsoloUpdateTimer += dt;
+    if (this.subsoloUpdateTimer >= 1) {
+      this.subsoloUpdateTimer %= 1;
+      state.subsoloManager?.update(1);
+    }
     if (this.sceneManager?.isSubsoloActive()) {
       this.subsoloRenderer?.update(dt);
-      state.subsoloManager?.update(dt);
       this.subsoloUI?.update(dt);
 
       // Movimento 2D do jogador no chão do túnel
@@ -2086,7 +2378,6 @@ class Game {
       this.hud?.setInteractionPrompt(Boolean(promptLabel), promptLabel);
       return;
     }
-    state.subsoloManager?.update(dt);
     this.secretCustomerManager?.update(dt, this.sceneManager?.isSurfaceActive());
 
     this.gameTime += dt;
@@ -2165,18 +2456,25 @@ class Game {
     // Atualiza indicador de atendimento manual
     const nearbyCompost = this.getNearbyCompost();
     const nearbyBench = this.getNearbyBench();
+    const nearbyBetaStatue = this.getNearbyBetaStatue();
     const canServeManually = !state.isEmployeeActive('cashier')
       && distToCounter < 85
       && this.customerManager.hasWaitingCustomer();
     this.hud.setInteractionPrompt(
-      this.player.isSeated || (nearbyCompost && state.basket.length > 0) || nearbyBench || canServeManually,
+      this.player.isSeated
+        || (nearbyCompost && state.basket.length > 0)
+        || nearbyBench
+        || nearbyBetaStatue
+        || canServeManually,
       this.player.isSeated
         ? 'Levantar-se'
         : nearbyCompost && state.basket.length > 0
           ? 'Escolher flores para o compostor'
           : nearbyBench
             ? 'Sentar no banco'
-            : 'Atender Cliente'
+            : nearbyBetaStatue
+              ? 'Ler placa da estátua BETA'
+              : 'Atender Cliente'
     );
 
     // Atualiza entidades
@@ -2352,6 +2650,22 @@ class Game {
 
     // 4. Parcelas e Flores
     this.fieldManager.draw(this.ctx, this.visibleWorldBounds);
+    if (
+      this.betaStatueDecoration
+      && this.isWorldRectVisible(
+        this.betaStatueDecoration.x - 153,
+        this.betaStatueDecoration.y - 234,
+        this.betaStatueDecoration.x + 153,
+        this.betaStatueDecoration.y
+      )
+    ) {
+      drawBetaStatue(
+        this.ctx,
+        this.betaStatueDecoration.x,
+        this.betaStatueDecoration.y,
+        { scale: BETA_STATUE_SCALE, time: this.gameTime }
+      );
+    }
 
     // 5. Clientes (superfície)
     this.customerManager.draw(this.ctx, this.visibleWorldBounds);
@@ -2714,65 +3028,84 @@ class Game {
 
   renderTerrain() {
     const palette = themeManager.palette;
-    const visible = this.visibleWorldBounds;
-
-    // Draw only the camera viewport; canvas clipping handles the screen edges.
-    this.ctx.fillStyle = palette.grassLight;
-    this.ctx.fillRect(
-      visible.left - 2,
-      visible.top - 2,
-      visible.right - visible.left + 4,
-      visible.bottom - visible.top + 4
-    );
-
     const fieldBounds = this.fieldManager.getMapAreaBounds();
     const maxX = Math.max(this.mapBounds.maxX, fieldBounds.right);
     const maxY = Math.max(this.mapBounds.maxY, fieldBounds.bottom);
+    const detailStep = state.settings.graphicsQuality === 'low' ? 1.8 : 1;
+    const terrainKey = [
+      palette.grassLight,
+      palette.terrainPatchLight,
+      palette.terrainPatchDark,
+      palette.terrainPatchAccent,
+      palette.terrainTuft,
+      detailStep,
+      maxX,
+      maxY
+    ].join('|');
+
+    if (this.cachedTerrainCanvas && this.cachedTerrainKey === terrainKey) {
+      this.ctx.drawImage(this.cachedTerrainCanvas, -1000, -50);
+      return;
+    }
+
+    const terrainWidth = Math.ceil(maxX + 1000);
+    const terrainHeight = Math.ceil(maxY + 50);
+    const offscreen = document.createElement('canvas');
+    offscreen.width = Math.max(1, terrainWidth);
+    offscreen.height = Math.max(1, terrainHeight);
+    const ctx = offscreen.getContext('2d');
+    if (!ctx) return;
+    ctx.translate(1000, 50);
+    ctx.fillStyle = palette.grassLight;
+    ctx.fillRect(-1000, -50, terrainWidth, terrainHeight);
 
     // Variações de relva subtis para quebrar o fundo sem competir com os canteiros.
-    const detailStep = state.settings.graphicsQuality === 'low' ? 1.8 : 1;
     const patchStepX = 245 * detailStep;
     const patchStepY = 215 * detailStep;
-    const firstPatchX = 130 + Math.max(0, Math.ceil((visible.left - 125 - 130) / patchStepX)) * patchStepX;
-    const firstPatchY = 125 + Math.max(0, Math.ceil((visible.top - 125 - 125) / patchStepY)) * patchStepY;
-    const lastPatchX = Math.min(maxX, visible.right + 125);
-    const lastPatchY = Math.min(maxY, visible.bottom + 125);
+    const firstPatchX = 130;
+    const firstPatchY = 125;
+    const lastPatchX = maxX + 125;
+    const lastPatchY = maxY + 125;
     for (let x = firstPatchX; x < lastPatchX; x += patchStepX) {
       for (let y = firstPatchY; y < lastPatchY; y += patchStepY) {
         const offsetX = (x * 7 + y * 3) % 72;
         const offsetY = (y * 5 + x * 2) % 58;
-        this.ctx.beginPath();
-        this.ctx.ellipse(x + offsetX, y + offsetY, 48, 28, (x % 3) * 0.12, 0, Math.PI * 2);
-        this.ctx.fillStyle = (x + y) % 2 === 0
+        ctx.beginPath();
+        ctx.ellipse(x + offsetX, y + offsetY, 48, 28, (x % 3) * 0.12, 0, Math.PI * 2);
+        ctx.fillStyle = (x + y) % 2 === 0
           ? (palette.terrainPatchLight || 'rgba(255, 246, 229, 0.12)')
           : (palette.terrainPatchDark || 'rgba(95, 163, 107, 0.09)');
-        this.ctx.fill();
+        ctx.fill();
 
-        this.ctx.beginPath();
-        this.ctx.ellipse(x + offsetX + 35, y + offsetY + 20, 22, 12, 0.2, 0, Math.PI * 2);
-        this.ctx.fillStyle = palette.terrainPatchAccent || 'rgba(247, 201, 72, 0.07)';
-        this.ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x + offsetX + 35, y + offsetY + 20, 22, 12, 0.2, 0, Math.PI * 2);
+        ctx.fillStyle = palette.terrainPatchAccent || 'rgba(247, 201, 72, 0.07)';
+        ctx.fill();
       }
     }
 
     // Pequenas tufas de relva distribuídas também pelas expansões.
-    this.ctx.fillStyle = palette.terrainTuft || 'rgba(47, 93, 74, 0.32)';
+    ctx.fillStyle = palette.terrainTuft || 'rgba(47, 93, 74, 0.32)';
     const tuftStepX = 140 * detailStep;
     const tuftStepY = 120 * detailStep;
-    const firstTuftX = 120 + Math.max(0, Math.ceil((visible.left - 60 - 120) / tuftStepX)) * tuftStepX;
-    const firstTuftY = 100 + Math.max(0, Math.ceil((visible.top - 60 - 100) / tuftStepY)) * tuftStepY;
-    const lastTuftX = Math.min(maxX, visible.right + 60);
-    const lastTuftY = Math.min(maxY, visible.bottom + 60);
+    const firstTuftX = 120;
+    const firstTuftY = 100;
+    const lastTuftX = maxX + 60;
+    const lastTuftY = maxY + 60;
     for (let x = firstTuftX; x < lastTuftX; x += tuftStepX) {
       for (let y = firstTuftY; y < lastTuftY; y += tuftStepY) {
         const ox = (x * 7) % 50;
         const oy = (y * 5) % 40;
-        this.ctx.beginPath();
-        this.ctx.arc(x + ox, y + oy, 3, 0, Math.PI * 2);
-        this.ctx.arc(x + ox + 5, y + oy - 3, 2.5, 0, Math.PI * 2);
-        this.ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + ox, y + oy, 3, 0, Math.PI * 2);
+        ctx.arc(x + ox + 5, y + oy - 3, 2.5, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
+
+    this.cachedTerrainCanvas = offscreen;
+    this.cachedTerrainKey = terrainKey;
+    this.ctx.drawImage(offscreen, -1000, -50);
   }
 
   getRoadLayout() {
@@ -3920,6 +4253,14 @@ class Game {
 function initGameInstance() {
   window.floristGame = new Game();
   window.game = window.floristGame;
+  window.subsoloDev = {
+    unlock: () => window.floristGame?.developerTools?.unlockSubsolo(),
+    enter: () => window.floristGame?.developerTools?.enterSubsolo(),
+    exit: () => window.floristGame?.developerTools?.exitSubsolo(),
+    fill: () => window.floristGame?.developerTools?.fillSubsolo(),
+    customer: () => window.floristGame?.developerTools?.spawnSecretCustomer(),
+    fiscal: () => window.floristGame?.developerTools?.triggerFiscal()
+  };
 }
 
 if (document.readyState === 'loading') {

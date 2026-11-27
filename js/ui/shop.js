@@ -41,6 +41,8 @@ export const UPGRADE_CATEGORIES = [
   }
 ];
 
+const UPGRADE_TINTS = ['#2F5D4A', '#B24A6C', '#2F6F8F', '#946414', '#6E4F80'];
+
 export class ShopUi {
   constructor(state, sound, hud) {
     this.state = state;
@@ -149,130 +151,237 @@ export class ShopUi {
     this.renderBouquetSpecializations();
     this.listContainer.innerHTML = '';
 
-    const categoryGrids = new Map();
-    for (const category of UPGRADE_CATEGORIES) {
+    const byCategory = new Map(UPGRADE_CATEGORIES.map(category => [category.id, []]));
+    const views = [];
+    for (const key of Object.keys(UPGRADES_CONFIG)) {
+      const view = this.getUpgradeView(key);
+      const bucket = byCategory.get(view.cfg.category);
+      if (!bucket) {
+        throw new Error(`A melhoria "${key}" não tem uma categoria visual válida.`);
+      }
+      bucket.push(view);
+      views.push(view);
+    }
+
+    const total = views.length;
+    const done = views.filter(view => view.status === 'max').length;
+    const ready = views.filter(view => view.status === 'ready').length;
+    const donePct = total ? Math.round((done / total) * 100) : 0;
+    const panel = document.createElement('div');
+    panel.className = 'up-panel';
+
+    const sections = [];
+    const chips = [];
+
+    UPGRADE_CATEGORIES.forEach((category, index) => {
+      const items = byCategory.get(category.id);
+      if (!items.length) return;
+
+      const tint = UPGRADE_TINTS[index % UPGRADE_TINTS.length];
+      const doneInCategory = items.filter(view => view.status === 'max').length;
       const section = document.createElement('section');
-      section.className = 'upgrade-category';
+      section.className = 'up-category upgrade-category';
+      section.id = `up-cat-${category.id}`;
       section.dataset.category = category.id;
+      section.style.setProperty('--tint', tint);
       section.setAttribute('aria-labelledby', `upgrade-category-${category.id}`);
       section.innerHTML = `
-        <div class="upgrade-category-heading">
-          <div class="upgrade-category-icon">${getIcon(category.icon, getIcon('upgrade'))}</div>
-          <div>
+        <div class="up-category-head">
+          <div class="up-category-icon" aria-hidden="true">${getIcon(category.icon, getIcon('upgrade'))}</div>
+          <div class="up-category-text">
             <h3 id="upgrade-category-${category.id}">${category.title}</h3>
             <p>${category.description}</p>
           </div>
+          <div class="up-category-count" aria-label="${doneInCategory} de ${items.length} concluídas">
+            <strong>${doneInCategory}</strong><span>/ ${items.length}</span>
+          </div>
         </div>
-        <div class="upgrade-category-grid"></div>
+        <div class="up-grid"></div>
       `;
-      categoryGrids.set(category.id, section.querySelector('.upgrade-category-grid'));
-      this.listContainer.appendChild(section);
+
+      const grid = section.querySelector('.up-grid');
+      for (const view of items) {
+        grid.appendChild(this.createUpgradeCard(view));
+      }
+      sections.push(section);
+
+      chips.push(`
+        <button type="button" class="up-chip" data-target="up-cat-${category.id}" style="--tint:${tint}">
+          <span class="up-chip-dot" aria-hidden="true"></span>
+          <span class="up-chip-label">${category.title}</span>
+          <span class="up-chip-count">${doneInCategory}/${items.length}</span>
+        </button>
+      `);
+    });
+
+    panel.innerHTML = `
+      <div class="up-overview">
+        <div class="up-overview-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}" aria-label="Melhorias concluídas">
+          <span style="width:${donePct}%"></span>
+        </div>
+        <ul class="up-stats">
+          <li class="up-stat"><strong>${done}/${total}</strong><span>concluídas</span></li>
+          <li class="up-stat${ready ? ' is-hot' : ''}"><strong>${ready}</strong><span>${ready === 1 ? 'pronta a comprar' : 'prontas a comprar'}</span></li>
+        </ul>
+      </div>
+      <nav class="up-nav" aria-label="Categorias de melhorias">${chips.join('')}</nav>
+    `;
+    sections.forEach(section => panel.appendChild(section));
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    panel.querySelector('.up-nav').addEventListener('click', event => {
+      const chip = event.target.closest('.up-chip');
+      if (!chip) return;
+      const target = panel.querySelector(`#${chip.dataset.target}`);
+      if (target) {
+        target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+      }
+    });
+
+    this.listContainer.appendChild(panel);
+  }
+
+  getUpgradeView(key) {
+    const cfg = UPGRADES_CONFIG[key];
+    const level = this.state.upgrades[key] || 0;
+    const isMax = level >= cfg.maxLevel;
+
+    let cost = 0;
+    if (!isMax) {
+      cost = cfg.type === 'single' || cfg.type === 'special'
+        ? cfg.cost
+        : cfg.getCost(level);
     }
 
-    const upgradeKeys = Object.keys(UPGRADES_CONFIG);
+    const requiredLevel = this.state.getUpgradeRequiredLevel(key, level);
+    const isLocked = !isMax && !!requiredLevel && this.state.level < requiredLevel;
+    const canAfford = !isMax && this.state.coins >= cost;
 
-    for (const key of upgradeKeys) {
-      const cfg = UPGRADES_CONFIG[key];
-      const categoryGrid = categoryGrids.get(cfg.category);
-      if (!categoryGrid) {
-        throw new Error(`A melhoria "${key}" não tem uma categoria visual válida.`);
-      }
-      const currentLevel = this.state.upgrades[key] || 0;
-      const isMax = currentLevel >= cfg.maxLevel;
+    let status = 'saving';
+    if (isMax) status = 'max';
+    else if (isLocked) status = 'locked';
+    else if (canAfford) status = 'ready';
 
-      // Calcular custo do próximo nível
-      let cost = 0;
-      if (!isMax) {
-        if (cfg.type === 'single' || cfg.type === 'special') {
-          cost = cfg.cost;
-        } else {
-          cost = cfg.getCost(currentLevel);
+    const isEmployeeKey = key === 'cashier' || key === 'harvester';
+    const employeeActive = isEmployeeKey && this.state.isEmployeeActive(key);
+    const activeCount = key === 'harvester' && employeeActive ? level : 0;
+
+    let levelLabel = cfg.type === 'single'
+      ? (level > 0 ? 'Instalado' : 'Disponível')
+      : `Nível ${level} de ${cfg.maxLevel}`;
+
+    let effect = cfg.effectDesc ? cfg.effectDesc(level, this.state.level) : '';
+    const nextEffect = !isMax && cfg.nextEffectDesc
+      ? cfg.nextEffectDesc(level, this.state.level)
+      : '';
+
+    if (key === 'cashier' && level > 0) {
+      levelLabel = `${employeeActive ? 'Contrato ativo' : 'Contrato suspenso'} · Nível ${level} de ${cfg.maxLevel}`;
+      effect = employeeActive
+        ? `Automação ativa · ${this.formatCoins(this.state.getEmployeeDailyWage('cashier'))}/dia`
+        : 'Automação suspensa · retoma o contrato no painel da equipa';
+    } else if (key === 'harvester' && level > 0) {
+      levelLabel = `${activeCount} / ${level} ajudantes ativos`;
+      effect = `${activeCount} de ${level} ajudantes a trabalhar · ${this.formatCoins(this.state.getEmployeeDailyWage('harvester'))}/dia`;
+    }
+
+    return {
+      key, cfg, level, isMax, cost, requiredLevel, isLocked, canAfford,
+      status, levelLabel, effect, nextEffect,
+    };
+  }
+
+  createUpgradeCard(view) {
+    const { key, cfg, level, isMax, cost, requiredLevel, status, levelLabel, effect, nextEffect } = view;
+    const card = document.createElement('article');
+    card.className = `up-card is-${status}`;
+    card.dataset.upgrade = key;
+
+    const icon = getIcon(cfg.iconKey || key, getIcon('upgrade'));
+    const showProgress = cfg.type !== 'single';
+    const progressPct = Math.min(100, Math.round((level / cfg.maxLevel) * 100));
+    const badges = {
+      max: `<span class="up-badge is-max"><span class="icon-inline">${getIcon('check')}</span>Máximo</span>`,
+      locked: `<span class="up-badge is-locked"><span class="icon-inline">${getIcon('lock')}</span>Nível ${requiredLevel}</span>`,
+      ready: '<span class="up-badge is-ready">Pronta</span>',
+      saving: '',
+    };
+
+    let costHtml;
+    if (isMax) {
+      costHtml = '<div class="up-cost is-done">Melhoria concluída</div>';
+    } else if (status === 'locked') {
+      costHtml = `
+        <div class="up-cost">
+          <span class="up-cost-value"><span class="icon-inline">${getIcon('coin')}</span>${formatNumber(cost)}</span>
+          <span class="up-note">Desbloqueia no nível ${requiredLevel}</span>
+        </div>`;
+    } else if (status === 'saving') {
+      const missing = cost - this.state.coins;
+      const savedPct = Math.max(0, Math.min(100, Math.round((this.state.coins / cost) * 100)));
+      costHtml = `
+        <div class="up-cost">
+          <span class="up-cost-value"><span class="icon-inline">${getIcon('coin')}</span>${formatNumber(cost)}</span>
+          <span class="up-save" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${savedPct}" aria-label="Moedas já juntas"><span style="width:${savedPct}%"></span></span>
+          <span class="up-note">Faltam ${formatNumber(missing)} moedas</span>
+        </div>`;
+    } else {
+      costHtml = `
+        <div class="up-cost">
+          <span class="up-cost-value"><span class="icon-inline">${getIcon('coin')}</span>${formatNumber(cost)}</span>
+        </div>`;
+    }
+
+    let buttonHtml;
+    if (isMax) {
+      buttonHtml = '<button type="button" class="btn-primary btn-buy-upgrade up-buy" disabled>Nível Máximo</button>';
+    } else if (status === 'locked') {
+      buttonHtml = `<button type="button" class="btn-primary btn-buy-upgrade up-buy" disabled><span class="icon-inline">${getIcon('lock')}</span> Requer Nível ${requiredLevel}</button>`;
+    } else {
+      buttonHtml = `<button type="button" class="btn-primary btn-buy-upgrade up-buy" data-id="${key}" ${status === 'ready' ? '' : 'disabled'}>Adquirir</button>`;
+    }
+
+    card.innerHTML = `
+      <header class="up-card-head">
+        <div class="up-icon" aria-hidden="true">${icon}</div>
+        <div class="up-titles">
+          <h4 class="up-name">${cfg.name}</h4>
+          <p class="up-level">${levelLabel}</p>
+        </div>
+        ${badges[status]}
+      </header>
+
+      <p class="up-desc">${cfg.description}</p>
+
+      ${showProgress ? `
+        <div class="up-progress" role="progressbar" aria-valuemin="0" aria-valuemax="${cfg.maxLevel}" aria-valuenow="${level}" aria-label="Nível de ${cfg.name}">
+          <span style="width:${progressPct}%"></span>
+        </div>` : ''}
+
+      ${(effect || nextEffect) ? `
+        <dl class="up-effects">
+          ${effect ? `<div class="up-effect is-now"><dt>Agora</dt><dd>${effect}</dd></div>` : ''}
+          ${nextEffect ? `<div class="up-effect is-next"><dt>Próximo nível</dt><dd>${nextEffect}</dd></div>` : ''}
+        </dl>` : ''}
+
+      <footer class="up-foot">
+        ${costHtml}
+        ${buttonHtml}
+      </footer>
+    `;
+
+    const buyBtn = card.querySelector(`button[data-id="${key}"]`);
+    if (buyBtn && !buyBtn.disabled) {
+      buyBtn.addEventListener('click', () => {
+        if (this.state.buyUpgrade(key)) {
+          this.sound.playUpgrade();
+          this.hud.showToast(`Melhoria instalada: ${cfg.name}`, 'check');
+          this.render();
         }
-      }
-
-      const canAfford = !isMax && this.state.coins >= cost;
-      const requiredLevel = this.state.getUpgradeRequiredLevel(key, currentLevel);
-      const isLevelLocked = requiredLevel && this.state.level < requiredLevel;
-
-      const card = document.createElement('div');
-      card.className = 'upgrade-card';
-
-      let buttonHtml = '';
-      if (isMax) {
-        buttonHtml = `<button type="button" class="btn-primary btn-buy-upgrade" disabled>Nível Máximo</button>`;
-      } else if (isLevelLocked) {
-        buttonHtml = `<button type="button" class="btn-primary btn-buy-upgrade" disabled><span class="icon-inline">${getIcon('lock')}</span> Requer Nível ${requiredLevel}</button>`;
-      } else {
-        buttonHtml = `<button type="button" class="btn-primary btn-buy-upgrade" data-id="${key}" ${!canAfford ? 'disabled' : ''}>Adquirir</button>`;
-      }
-
-      const iconSvg = getIcon(cfg.iconKey || key, getIcon('upgrade'));
-      const currentEffect = cfg.effectDesc
-        ? cfg.effectDesc(currentLevel, this.state.level)
-        : '';
-      const activeCount = key === 'harvester' && this.state.isEmployeeActive('harvester')
-        ? currentLevel
-        : 0;
-      const nextEffect = !isMax && cfg.nextEffectDesc
-        ? cfg.nextEffectDesc(currentLevel, this.state.level)
-        : '';
-
-      card.innerHTML = `
-        <div>
-          <div class="upgrade-head">
-            <div class="upgrade-icon">${iconSvg}</div>
-            <div class="upgrade-title-area">
-              <h3>${cfg.name}</h3>
-              <div class="upgrade-level-tag">
-                ${cfg.type === 'single' ? (currentLevel > 0 ? 'Instalado' : 'Disponível') : `Nível ${currentLevel} de ${cfg.maxLevel}`}
-              </div>
-            </div>
-          </div>
-          <p class="upgrade-desc" style="margin-top: 8px;">${cfg.description}</p>
-          <p class="upgrade-desc" style="margin-top: 4px; font-weight: 700; color: #2F5D4A;">
-            ${currentEffect}
-          </p>
-          ${nextEffect ? `<p class="upgrade-next-effect">${nextEffect}</p>` : ''}
-        </div>
-
-        <div class="upgrade-footer">
-          <div class="upgrade-cost">
-            ${isMax ? '<span>—</span>' : `<span class="icon-inline">${getIcon('coin')}</span> <span>${formatNumber(cost)}</span>`}
-            ${!isMax && isLevelLocked ? `<span class="upgrade-shortfall">Requer nível ${requiredLevel}</span>` : ''}
-            ${!isMax && !isLevelLocked && !canAfford ? `<span class="upgrade-shortfall">Faltam ${formatNumber(cost - this.state.coins)} moedas</span>` : ''}
-          </div>
-          ${buttonHtml}
-        </div>
-      `;
-      if (key === 'cashier' && currentLevel > 0) {
-        const status = this.state.isEmployeeActive('cashier') ? 'Contrato ativo' : 'Contrato suspenso';
-        card.querySelector('.upgrade-level-tag').textContent = `${status} · Nível ${currentLevel} de ${cfg.maxLevel}`;
-      } else if (key === 'harvester' && currentLevel > 0) {
-        card.querySelector('.upgrade-level-tag').textContent = `${activeCount} / ${currentLevel} ajudantes ativos`;
-      }
-      const effectEl = card.querySelector('.upgrade-desc[style*="font-weight: 700"]');
-      if (effectEl && key === 'cashier' && currentLevel > 0) {
-        effectEl.textContent = this.state.isEmployeeActive('cashier')
-          ? `Automação ativa · ${this.formatCoins(this.state.getEmployeeDailyWage('cashier'))}/dia`
-          : 'Automação suspensa · retoma o contrato no painel da equipa';
-      } else if (effectEl && key === 'harvester' && currentLevel > 0) {
-        effectEl.textContent = `${activeCount} de ${currentLevel} ajudantes a trabalhar · ${this.formatCoins(this.state.getEmployeeDailyWage('harvester'))}/dia`;
-      }
-
-      // Event listener de compra
-      const buyBtn = card.querySelector(`button[data-id="${key}"]`);
-      if (buyBtn && !buyBtn.disabled) {
-        buyBtn.addEventListener('click', () => {
-          if (this.state.buyUpgrade(key)) {
-            this.sound.playUpgrade();
-            this.hud.showToast(`Melhoria instalada: ${cfg.name}`, 'check');
-            this.render();
-          }
-        });
-      }
-
-      categoryGrid.appendChild(card);
+      });
     }
+
+    return card;
   }
 
   formatCoins(amount) {
@@ -406,60 +515,177 @@ export class ShopUi {
     const challenges = this.state.getChallenges();
     this.renderLongTermProjects();
     this.renderZoneActivities();
+
+    const el = (tag, className, text) => {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    };
+    const icon = (name) => getIcon(name, '');
+
     const periods = [
-      { type: 'daily', title: 'Desafios diários', reset: 'Renovam todos os dias.' },
-      { type: 'weekly', title: 'Desafios semanais', reset: 'Renovam à segunda-feira.' }
+      { type: 'daily', title: 'Desafios diários', short: 'Diárias', reset: 'Renovam todos os dias.' },
+      { type: 'weekly', title: 'Desafios semanais', short: 'Semanais', reset: 'Renovam à segunda-feira.' }
     ];
+
+    const summary = {};
+    const claimable = [];
+    for (const period of periods) {
+      const list = challenges[period.type] || [];
+      summary[period.type] = {
+        total: list.length,
+        done: list.filter((challenge) => challenge.complete).length
+      };
+      for (const challenge of list) {
+        if (challenge.complete && !challenge.claimed) claimable.push(challenge);
+      }
+    }
+
+    const overview = el('div', 'challenge-overview');
+    const stats = el('div', 'challenge-overview-stats');
+    const makeStat = (label, value, modifier) => {
+      const stat = el('div', `challenge-stat${modifier ? ` ${modifier}` : ''}`);
+      stat.append(el('strong', '', value), el('span', '', label));
+      return stat;
+    };
+    stats.append(
+      makeStat('Para reclamar', String(claimable.length), claimable.length ? 'is-hot' : ''),
+      makeStat(periods[0].short, `${summary.daily.done}/${summary.daily.total}`),
+      makeStat(periods[1].short, `${summary.weekly.done}/${summary.weekly.total}`)
+    );
+    overview.appendChild(stats);
+
+    if (claimable.length > 0) {
+      const totalCoins = claimable.reduce((sum, challenge) => sum + (challenge.rewardCoins || 0), 0);
+      const totalRep = claimable.reduce((sum, challenge) => sum + (challenge.rewardRep || 0), 0);
+      const claimAll = el('button', 'btn-primary challenge-claim-all');
+      claimAll.type = 'button';
+      claimAll.append(
+        el('span', 'challenge-claim-all-label', `Reclamar tudo (${claimable.length})`),
+        el('span', 'challenge-claim-all-sub', `+${formatNumber(totalCoins)} moedas · +${formatNumber(totalRep)} XP`)
+      );
+      claimAll.addEventListener('click', () => {
+        let coins = 0;
+        let rep = 0;
+        let count = 0;
+        for (const challenge of claimable) {
+          const claimed = this.state.claimChallenge(challenge.id);
+          if (claimed) {
+            coins += claimed.rewardCoins || 0;
+            rep += claimed.rewardRep || 0;
+            count++;
+          }
+        }
+        if (!count) {
+          this.hud.showToast('Não foi possível reclamar as recompensas.', 'lock');
+          return;
+        }
+        this.sound.playUpgrade();
+        this.hud.showToast(
+          `${count} ${count === 1 ? 'recompensa reclamada' : 'recompensas reclamadas'}: +${formatNumber(coins)} moedas e +${formatNumber(rep)} XP.`,
+          'check'
+        );
+        this.renderChallenges();
+      });
+      overview.appendChild(claimAll);
+    }
+    this.challengesContainer.appendChild(overview);
 
     for (const period of periods) {
       const section = document.createElement('section');
       section.className = 'challenge-period';
+      section.dataset.period = period.type;
+
       const heading = document.createElement('div');
       heading.className = 'challenge-period-heading';
-      const title = document.createElement('h4');
-      title.textContent = period.title;
-      const reset = document.createElement('span');
-      reset.textContent = `${period.reset} Recompensas concluídas ficam disponíveis até 24 horas após a renovação.`;
-      heading.append(title, reset);
+      const titleRow = el('div', 'challenge-period-title');
+      titleRow.append(
+        el('h4', '', period.title),
+        el('span', 'challenge-period-count', `${summary[period.type].done}/${summary[period.type].total}`)
+      );
+      heading.append(
+        titleRow,
+        el(
+          'span',
+          'challenge-period-note',
+          `${period.reset} Recompensas concluídas ficam disponíveis até 24 horas após a renovação.`
+        )
+      );
+
       const cards = document.createElement('div');
       cards.className = 'challenge-card-list';
 
-      for (const challenge of challenges[period.type]) {
+      for (const challenge of challenges[period.type] || []) {
+        const state = challenge.claimed
+          ? 'is-claimed'
+          : challenge.complete ? 'is-complete' : 'is-progress';
         const card = document.createElement('article');
-        card.className = `challenge-card${challenge.complete ? ' is-complete' : ''}${challenge.claimed ? ' is-claimed' : ''}${challenge.claimUntil ? ' has-grace-period' : ''}`;
-        const title = document.createElement('h5');
-        title.textContent = challenge.title;
-        const cardHeading = document.createElement('div');
-        cardHeading.className = 'challenge-card-heading';
+        card.className =
+          `challenge-card ${state}` +
+          `${challenge.claimed ? ' is-complete' : ''}` +
+          `${challenge.claimUntil ? ' has-grace-period' : ''}`;
+
+        const pct = challenge.target > 0
+          ? Math.max(0, Math.min(100, (challenge.progress / challenge.target) * 100))
+          : (challenge.complete ? 100 : 0);
+        const titleId = `challenge-title-${challenge.id}`;
+        const badge = el('span', 'challenge-badge');
+        badge.setAttribute('aria-hidden', 'true');
+        if (challenge.complete) badge.innerHTML = icon('check') || '✓';
+        else badge.textContent = `${Math.round(pct)}%`;
+
+        const title = el('h5', '', challenge.title);
+        title.id = titleId;
+        card.setAttribute('aria-labelledby', titleId);
+
+        const cardHeading = el('div', 'challenge-card-heading');
         cardHeading.append(
+          badge,
           title,
           this.hud.createFavoriteButton('challenge', challenge.id)
         );
-        const description = document.createElement('p');
-        description.textContent = challenge.claimUntil
-          ? `${challenge.progressText} Prazo extra para reclamar até ${new Date(challenge.claimUntil).toLocaleString()}.`
-          : challenge.progressText;
-        const progressLabel = document.createElement('span');
-        progressLabel.className = 'challenge-progress-label';
-        progressLabel.textContent = `${formatNumber(challenge.progress)} / ${formatNumber(challenge.target)}`;
+        const description = el('p', 'challenge-card-desc', challenge.progressText);
+        const progressLabelText =
+          `${formatNumber(challenge.progress)} / ${formatNumber(challenge.target)}`;
+        const progressRow = el('div', 'challenge-progress-row');
+        progressRow.append(el('span', 'challenge-progress-label', progressLabelText));
+
         const progress = document.createElement('div');
         progress.className = 'challenge-progress-track';
         progress.setAttribute('role', 'progressbar');
         progress.setAttribute('aria-valuemin', '0');
         progress.setAttribute('aria-valuemax', String(challenge.target));
         progress.setAttribute('aria-valuenow', String(challenge.progress));
-        progress.setAttribute('aria-label', `${challenge.title}: ${progressLabel.textContent}`);
+        progress.setAttribute('aria-label', `${challenge.title}: ${progressLabelText}`);
         const fill = document.createElement('span');
-        fill.style.width = `${challenge.progress / challenge.target * 100}%`;
+        fill.style.width = `${pct}%`;
         progress.appendChild(fill);
-        const footer = document.createElement('div');
-        footer.className = 'challenge-card-footer';
-        const reward = document.createElement('span');
-        reward.className = 'challenge-reward';
-        reward.textContent = `Recompensa: ${formatNumber(challenge.rewardCoins)} moedas · ${formatNumber(challenge.rewardRep)} XP`;
-        const claim = document.createElement('button');
+
+        const footer = el('div', 'challenge-card-footer');
+        const reward = el('div', 'challenge-reward');
+        reward.setAttribute(
+          'aria-label',
+          `Recompensa: ${formatNumber(challenge.rewardCoins)} moedas e ${formatNumber(challenge.rewardRep)} XP`
+        );
+        const coinChip = el('span', 'challenge-chip is-coins');
+        const coinIcon = el('span', 'challenge-chip-icon');
+        coinIcon.setAttribute('aria-hidden', 'true');
+        coinIcon.innerHTML = icon('coin');
+        coinChip.append(coinIcon, el('span', '', formatNumber(challenge.rewardCoins)));
+        const xpChip = el('span', 'challenge-chip is-xp');
+        xpChip.append(
+          el('span', 'challenge-chip-tag', 'XP'),
+          el('span', '', formatNumber(challenge.rewardRep))
+        );
+        reward.append(coinChip, xpChip);
+
+        const ready = challenge.complete && !challenge.claimed;
+        const claim = el(
+          'button',
+          `btn-secondary challenge-claim-button${ready ? ' is-ready' : ''}`
+        );
         claim.type = 'button';
-        claim.className = 'btn-secondary challenge-claim-button';
         claim.dataset.challengeId = challenge.id;
         claim.textContent = challenge.claimed
           ? 'Reclamada'
@@ -474,11 +700,25 @@ export class ShopUi {
             return;
           }
           this.sound.playUpgrade();
-          this.hud.showToast(`Recompensa reclamada: +${formatNumber(claimed.rewardCoins)} moedas e +${formatNumber(claimed.rewardRep)} XP.`, 'check');
-          this.render();
+          this.hud.showToast(
+            `Recompensa reclamada: +${formatNumber(claimed.rewardCoins)} moedas e +${formatNumber(claimed.rewardRep)} XP.`,
+            'check'
+          );
+          this.renderChallenges();
         });
         footer.append(reward, claim);
-        card.append(cardHeading, description, progressLabel, progress, footer);
+
+        card.append(cardHeading, description);
+        if (challenge.claimUntil) {
+          card.appendChild(
+            el(
+              'p',
+              'challenge-grace',
+              `Prazo extra para reclamar até ${new Date(challenge.claimUntil).toLocaleString()}.`
+            )
+          );
+        }
+        card.append(progressRow, progress, footer);
         cards.appendChild(card);
       }
 

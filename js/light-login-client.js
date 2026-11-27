@@ -4,7 +4,7 @@ const ACCESS_KEY = 'light_group_access_token';
 const REFRESH_KEY = 'light_group_refresh_token';
 const API_BASE_KEY = 'light_group_api_base';
 const DEVICE_ID_KEY = 'light_group_device_id';
-const REVISION_KEY = 'floristever_cloud_revision';
+const REVISION_PREFIX = 'floristever_cloud_revision:';
 function getDefaultApiBase() {
   const stored = localStorage.getItem(API_BASE_KEY);
   if (stored) return stored.replace(/\/$/, '');
@@ -44,6 +44,7 @@ export class LightLoginClient {
     this.deviceId = getDeviceId();
     this.user = null;
     this.syncEnabled = false;
+    this.refreshPromise = null;
   }
 
   get accessToken() {
@@ -55,11 +56,13 @@ export class LightLoginClient {
   }
 
   get cloudRevision() {
-    return Number(localStorage.getItem(REVISION_KEY)) || 0;
+    const userId = this.user?.id || this.user?._id;
+    return userId ? Number(localStorage.getItem(`${REVISION_PREFIX}${userId}`)) || 0 : 0;
   }
 
   set cloudRevision(value) {
-    localStorage.setItem(REVISION_KEY, String(Number(value) || 0));
+    const userId = this.user?.id || this.user?._id;
+    if (userId) localStorage.setItem(`${REVISION_PREFIX}${userId}`, String(Number(value) || 0));
   }
 
   setApiBase(apiBase) {
@@ -140,7 +143,14 @@ export class LightLoginClient {
     }, false);
   }
 
-  async refresh() {
+  refresh() {
+    if (!this.refreshPromise) {
+      this.refreshPromise = this.performRefresh().finally(() => { this.refreshPromise = null; });
+    }
+    return this.refreshPromise;
+  }
+
+  async performRefresh() {
     const response = await fetch(`${this.apiBase}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -185,6 +195,7 @@ export class LightLoginClient {
   async me() {
     const data = await this.request('/users/me');
     this.user = data.user;
+    this.syncEnabled = true;
     return data.user;
   }
 
@@ -192,19 +203,25 @@ export class LightLoginClient {
     return this.request(`/saves/${encodeURIComponent(this.appId)}`);
   }
 
-  async putSave(data, { force = false } = {}) {
-    const checksum = await sha256Hex(stableJson(data));
+  async putSave(data, { force = false, keepalive = false } = {}) {
+    const checksum = await this.checksum(data);
     const result = await this.request(`/saves/${encodeURIComponent(this.appId)}`, {
       method: 'PUT',
+      keepalive,
       body: JSON.stringify({
         data,
         baseRevision: force ? Number.MAX_SAFE_INTEGER : this.cloudRevision,
+        force,
         deviceId: this.deviceId,
         checksum
       })
     });
     this.cloudRevision = result.revision;
     return result;
+  }
+
+  checksum(data) {
+    return sha256Hex(stableJson(data));
   }
 }
 

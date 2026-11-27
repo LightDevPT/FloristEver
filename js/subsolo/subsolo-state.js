@@ -329,9 +329,18 @@ export class SubsoloManager {
   }
 
   collectPreparation() {
-    if (this.data.preparacao.status !== 'ready') return false;
+    if (this.data.preparacao.status !== 'ready') {
+      console.log('[VENDA-DEBUG] produção não recolhida: preparação não está pronta', {
+        status: this.data.preparacao.status
+      });
+      return false;
+    }
     const prodId = this.data.preparacao.productId;
     this.data.armazemOculto[prodId] = (this.data.armazemOculto[prodId] || 0) + 1;
+    console.log('[VENDA-DEBUG] produto produzido e guardado no armazém', {
+      productId: prodId,
+      armazem: { ...this.data.armazemOculto }
+    });
     this.data.preparacao.status = 'idle';
     this.data.preparacao.productId = null;
     return true;
@@ -369,27 +378,67 @@ export class SubsoloManager {
 
   transferToMala(productId, amount = 1) {
     const available = this.data.armazemOculto[productId] || 0;
-    if (available < amount) return false;
+    if (available < amount) {
+      console.log('[VENDA-DEBUG] transferência para mala falhou: stock insuficiente', {
+        productId,
+        amount,
+        available
+      });
+      return false;
+    }
 
     const currentTotalMala = (this.data.mala.ramo || 0) + (this.data.mala.maco || 0) + (this.data.mala.reserva || 0);
     const cap = this.getMalaCapacity();
-    if (currentTotalMala + amount > cap) return false;
+    if (currentTotalMala + amount > cap) {
+      console.log('[VENDA-DEBUG] transferência para mala falhou: capacidade excedida', {
+        currentTotalMala,
+        amount,
+        cap
+      });
+      return false;
+    }
 
     this.data.armazemOculto[productId] -= amount;
     this.data.mala[productId] = (this.data.mala[productId] || 0) + amount;
+    console.log('[VENDA-DEBUG] produto transferido para mala', {
+      productId,
+      amount,
+      armazem: { ...this.data.armazemOculto },
+      mala: { ...this.data.mala }
+    });
     return true;
   }
 
   depositMalaToCofre(productId, amount = 1) {
     const inMala = this.data.mala[productId] || 0;
-    if (inMala < amount) return false;
+    if (inMala < amount) {
+      console.log('[VENDA-DEBUG] depósito falhou: produto insuficiente na mala', {
+        productId,
+        amount,
+        inMala
+      });
+      return false;
+    }
 
     const currentInCofre = (this.data.cofre.ramo || 0) + (this.data.cofre.maco || 0) + (this.data.cofre.reserva || 0);
     const cap = this.getCofreCapacity();
-    if (currentInCofre + amount > cap) return false;
+    if (currentInCofre + amount > cap) {
+      console.log('[VENDA-DEBUG] depósito falhou: capacidade do cofre excedida', {
+        currentInCofre,
+        amount,
+        cap
+      });
+      return false;
+    }
 
     this.data.mala[productId] -= amount;
     this.data.cofre[productId] = (this.data.cofre[productId] || 0) + amount;
+    console.log('[VENDA-DEBUG] produto depositado no cofre', {
+      productId,
+      amount,
+      cofre: { ...this.data.cofre },
+      stockType: typeof this.data.cofre[productId]
+    });
     return true;
   }
 
@@ -406,23 +455,60 @@ export class SubsoloManager {
   completeSale(order, packagingId = 'paper') {
     const productId = order.productId || 'ramo';
     const quantity = order.quantity || 1;
+    console.log('[VENDA-DEBUG] completeSale entrada', {
+      order,
+      productId,
+      quantity,
+      quantityType: typeof quantity,
+      cofre: { ...this.data.cofre },
+      cofreProductType: typeof this.data.cofre[productId],
+      coins: this.gameState.coins,
+      packagingId
+    });
 
     // Verifica stock no Cofre (só se vende a partir do Cofre na superfície!)
     if ((this.data.cofre[productId] || 0) < quantity) {
+      console.log('[VENDA-DEBUG] validação falhou: stock insuficiente', {
+        productId,
+        quantity,
+        inCofre: this.data.cofre[productId] || 0
+      });
       return { success: false, reason: 'Stock insuficiente no cofre' };
     }
+    console.log('[VENDA-DEBUG] validação de stock passou', {
+      productId,
+      quantity,
+      inCofre: this.data.cofre[productId],
+      inCofreType: typeof this.data.cofre[productId]
+    });
 
-    const packaging = PACKAGING_OPTIONS.find((p) => p.id === packagingId) || PACKAGING_OPTIONS[1];
+    const foundPackaging = PACKAGING_OPTIONS.find((p) => p.id === packagingId);
+    const packaging = foundPackaging || PACKAGING_OPTIONS[1];
+    console.log('[VENDA-DEBUG] validação da embalagem', {
+      packagingId,
+      found: Boolean(foundPackaging),
+      cost: packaging.cost,
+      consumesFlowers: packaging.consumesFlowers === true
+    });
     if (packaging.consumesFlowers) {
       // Consome flores comuns da loja para o Ramo de Fachada
       const availableFlowers = Object.entries(this.gameState.stock).filter(([, c]) => c >= 1);
+      console.log('[VENDA-DEBUG] validação de flores para embalagem', {
+        availableFlowers,
+        required: 2
+      });
       if (availableFlowers.length < 2) {
+        console.log('[VENDA-DEBUG] validação falhou: flores insuficientes para embalagem');
         return { success: false, reason: 'Flores insuficientes para o Ramo de Fachada' };
       }
       this.gameState.stock[availableFlowers[0][0]]--;
       this.gameState.stock[availableFlowers[1][0]]--;
     } else if (packaging.cost > 0) {
       if (this.gameState.coins < packaging.cost) {
+        console.log('[VENDA-DEBUG] validação falhou: moedas insuficientes para embalagem', {
+          coins: this.gameState.coins,
+          cost: packaging.cost
+        });
         return { success: false, reason: 'Moedas insuficientes para a embalagem' };
       }
       this.gameState.coins -= packaging.cost;
@@ -430,6 +516,11 @@ export class SubsoloManager {
 
     // Deduz do Cofre
     this.data.cofre[productId] -= quantity;
+    console.log('[VENDA-DEBUG] produto transferido para comprador', {
+      productId,
+      quantity,
+      cofreAfterSale: this.data.cofre[productId]
+    });
 
     // Cálculo do Preço
     const prodConfig = SUBSOLO_PRODUCTS[productId] || SUBSOLO_PRODUCTS.ramo;
@@ -457,7 +548,14 @@ export class SubsoloManager {
     }
 
     this.gameState.notify('subsolo_sale_completed', { revenue: finalPrice, respectXp: xpGain });
-    this.gameState.save();
+    const saved = this.gameState.save();
+    console.log('[VENDA-DEBUG] pagamento aplicado', {
+      revenue: finalPrice,
+      coins: this.gameState.coins,
+      xp: xpGain,
+      respect: this.data.respeito,
+      saved
+    });
     return { success: true, revenue: finalPrice, xp: xpGain };
   }
 

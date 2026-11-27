@@ -47,7 +47,7 @@ export class BouquetUi {
     this.activeOrderId = null;
 
     this.init();
-    this.state.subscribe((event) => {
+    this.state.subscribe((event, data) => {
       if (
         ['basket_changed', 'flower_harvested', 'stock_updated', 'plot_unlocked', 'level_up', 'order_completed', 'order_cycle_completed', 'favorite_objective_changed', 'herbarium_updated', 'special_visitor_met', 'state_loaded'].includes(event)
         && this.modalBook
@@ -56,7 +56,8 @@ export class BouquetUi {
         this.renderBook();
       }
       if (event === 'order_cycle_completed') {
-        this.hud.showToast(`Florada concluída! As encomendas da florada ${data.orderCycle} já chegaram.`, 'check');
+        const cycle = data?.orderCycle ?? this.state.orderCycle;
+        this.hud.showToast(`Florada concluída! As encomendas da florada ${cycle} já chegaram.`, 'check');
       }
       if (
         ['stock_updated', 'plot_unlocked', 'level_up', 'state_loaded'].includes(event)
@@ -208,7 +209,10 @@ export class BouquetUi {
     const totalPages = hasCaderno ? 3 : 2;
     const kickers = ['CAPÍTULO I', 'CAPÍTULO II', 'APÊNDICE SECRETO'];
     if (kicker) kicker.textContent = kickers[this.bookPageIndex] || 'CAPÍTULO I';
-    if (counter) counter.textContent = `0${this.bookPageIndex + 1} / 0${totalPages}`;
+    if (counter) {
+      counter.textContent =
+        `${String(this.bookPageIndex + 1).padStart(2, '0')} / ${String(totalPages).padStart(2, '0')}`;
+    }
     if (previous) previous.disabled = this.bookPageIndex === 0;
     if (next) next.disabled = this.bookPageIndex >= totalPages - 1;
 
@@ -219,6 +223,8 @@ export class BouquetUi {
     ];
     if (page) page.setAttribute('aria-label', pageLabels[this.bookPageIndex] || 'Página do livro');
 
+    document.querySelector('#modal-book .book-page-scroll')?.scrollTo({ top: 0 });
+
     if (this.bookPageIndex === 2) {
       this.renderCaderno();
     }
@@ -228,7 +234,7 @@ export class BouquetUi {
     const listEl = document.getElementById('caderno-codes-list');
     const countEl = document.getElementById('caderno-discovered-count');
     if (!listEl) return;
-    listEl.innerHTML = '';
+    listEl.replaceChildren();
 
     const discoveredIds = new Set(this.state.subsolo?.caderno?.paginasDescobertas || []);
     if (countEl) {
@@ -240,49 +246,70 @@ export class BouquetUi {
       const card = document.createElement('div');
       card.className = `caderno-code-card ${isDiscovered ? 'is-discovered' : 'is-locked'}`;
 
+      const header = document.createElement('div');
+      header.className = 'caderno-code-header';
+      const phrase = document.createElement('span');
+      phrase.className = `caderno-code-phrase${isDiscovered ? '' : ' is-hidden'}`;
+      const badge = document.createElement('span');
+      badge.className = `caderno-code-badge${isDiscovered ? '' : ' locked'}`;
+      header.append(phrase, badge);
+
+      const meaning = document.createElement('div');
+
       if (isDiscovered) {
-        let meaning = '';
+        let meaningText = '';
         if (code.productId) {
-          const p = SUBSOLO_PRODUCTS[code.productId];
-          meaning = `${code.quantity || 1}x ${p?.name || code.productId}`;
+          const product = SUBSOLO_PRODUCTS[code.productId];
+          meaningText = `${code.quantity || 1}x ${product?.name || code.productId}`;
         } else if (code.varietyId) {
-          meaning = `Variedade: ${code.varietyId === 'luar_roxo' ? 'Luar Roxo' : 'Âmbar Seco'}`;
+          meaningText = `Variedade: ${code.varietyId === 'luar_roxo' ? 'Luar Roxo' : 'Âmbar Seco'}`;
         } else if (code.minQuality) {
-          meaning = `Qualidade mínima: ★${code.minQuality}`;
+          meaningText = `Qualidade mínima: ★${code.minQuality}`;
         } else if (code.urgent) {
-          meaning = 'Pedido Urgente (+15% gorjeta)';
+          meaningText = 'Pedido Urgente (+15% gorjeta)';
         }
 
-        card.innerHTML = `
-          <div class="caderno-code-header">
-            <span class="caderno-code-phrase">"${code.phrase}"</span>
-            <span class="caderno-code-badge">Decifrado</span>
-          </div>
-          <div class="caderno-code-meaning">Significado: <strong>${meaning}</strong></div>
-        `;
+        phrase.textContent = `"${code.phrase}"`;
+        badge.textContent = 'Decifrado';
+        meaning.className = 'caderno-code-meaning';
+        const strong = document.createElement('strong');
+        strong.textContent = meaningText;
+        meaning.append('Significado: ', strong);
       } else {
-        card.innerHTML = `
-          <div class="caderno-code-header">
-            <span class="caderno-code-phrase" style="color:#7D8994">"???"</span>
-            <span class="caderno-code-badge locked">Bloqueado</span>
-          </div>
-          <div class="caderno-code-meaning" style="color:#6A7782">Atende clientes discretos ao balcão para decifrar este código.</div>
-        `;
+        phrase.textContent = '"???"';
+        badge.textContent = 'Bloqueado';
+        meaning.className = 'caderno-code-meaning is-hidden';
+        meaning.textContent = 'Atende clientes discretos ao balcão para decifrar este código.';
       }
+
+      card.append(header, meaning);
       listEl.appendChild(card);
     });
 
-    // Secção de contra-senhas decifradas
     const countersignSec = document.createElement('div');
     countersignSec.className = 'caderno-countersigns-section';
-    countersignSec.innerHTML = `<h4 class="caderno-section-title">Contra-senhas Conhecidas</h4>`;
+    const sectionTitle = document.createElement('h4');
+    sectionTitle.className = 'caderno-section-title';
+    sectionTitle.textContent = 'Contra-senhas Conhecidas';
+    countersignSec.appendChild(sectionTitle);
+
     COUNTERSIGNS.forEach((cs) => {
       const row = document.createElement('div');
       row.className = 'caderno-countersign-card';
-      row.innerHTML = `
-        <div class="cs-prompt">Cliente: <em>"${cs.prompt}"</em></div>
-        <div class="cs-response">Resposta: <strong>"${cs.correct}"</strong></div>
-      `;
+
+      const prompt = document.createElement('div');
+      prompt.className = 'cs-prompt';
+      const promptText = document.createElement('em');
+      promptText.textContent = `"${cs.prompt}"`;
+      prompt.append('Cliente: ', promptText);
+
+      const response = document.createElement('div');
+      response.className = 'cs-response';
+      const responseText = document.createElement('strong');
+      responseText.textContent = `"${cs.correct}"`;
+      response.append('Resposta: ', responseText);
+
+      row.append(prompt, response);
       countersignSec.appendChild(row);
     });
     listEl.appendChild(countersignSec);

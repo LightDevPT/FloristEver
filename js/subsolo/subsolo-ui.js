@@ -220,8 +220,10 @@ export class SubsoloUI {
       // Se o jogador estiver em modo decoração de jardim ou sentado, desativa imediatamente
       if (this.game.decorationMode) {
         this.game.decorationMode = false;
+        this.game.betaStatuePlacementPending = false;
         document.body.classList.remove('garden-decoration-mode');
         document.getElementById('btn-toggle-decoration-mode')?.setAttribute('aria-pressed', 'false');
+        this.game.updateBetaDecorationPanel();
       }
       if (this.game.player?.isSeated) {
         this.game.player.standUp();

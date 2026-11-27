@@ -10,10 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="light-login-api-base" content="https://floristever.netlify.app/api/v1">
-  <meta
-    http-equiv="Content-Security-Policy"
-    content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https: http://localhost:4000 https://floristever.netlify.app; media-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'"
-  >
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://floristever.netlify.app; media-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'">
   <meta name="referrer" content="no-referrer">
 
   <!-- PWA Manifest -->
@@ -47,6 +44,12 @@
   <div id="game-container">
     <!-- Canvas de Renderização 2D -->
     <canvas id="game-canvas" role="img" aria-label="Campo de jogo FloristEver. Clica na gota junto ao nome de uma parcela para regar e acelerar o crescimento das flores nessa parcela."></canvas>
+    <aside id="beta-statue-decoration-panel" class="beta-statue-decoration-panel hidden" aria-label="Colocar estátua BETA">
+      <h3>Estátua BETA</h3>
+      <canvas id="beta-statue-decoration-preview" width="220" height="170" role="img" aria-label="Pré-visualização da estátua Mãos que cuidam"></canvas>
+      <p id="beta-statue-decoration-status" role="status">Escolhe Colocar no jardim e clica no local pretendido.</p>
+      <button id="btn-place-beta-statue" type="button" class="btn-primary">Colocar no jardim</button>
+    </aside>
     <!-- Overlay do HUD Superior -->
     <header id="hud" class="hud-layer" aria-label="Painel de Estado">
       <!-- Moedas / Dinheiro -->
@@ -218,6 +221,12 @@
       </div>
     </header>
 
+    <div id="dev-tools-launcher" class="dev-tools-launcher">
+      <button id="btn-open-dev-tools" class="btn-hud btn-bounce hidden" type="button" title="Ferramentas de Desenvolvimento e Subsolo" aria-label="Ferramentas de desenvolvimento">
+        <span class="icon" aria-hidden="true"><svg class="hud-svg-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.9 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" fill="#B56BFF" stroke="#2F5D4A" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+        <span class="btn-label">DEV</span>
+      </button>
+    </div>
 
     <aside id="map-panel" class="map-panel hidden" aria-label="Mapa do jardim">
       <div class="map-panel-header">
@@ -513,6 +522,7 @@
                   <span class="book-page-rule" aria-hidden="true"></span>
                   <span id="book-page-counter">01 / 02</span>
                 </header>
+                <div class="book-page-scroll">
                 <div class="tab-pane active" id="tab-orders">
                   <div class="book-page-title-row">
                     <span class="book-chapter-seal" aria-hidden="true">
@@ -597,6 +607,7 @@
                     <!-- Gerado dinamicamente por bouquet.js -->
                   </div>
                 </div>
+                </div>
                 <footer class="book-page-footer">
                   <button class="book-turn-button" id="book-prev-page" type="button" aria-label="Voltar à página de encomendas" disabled>
                     <span aria-hidden="true">‹</span> Anterior
@@ -626,11 +637,11 @@
         </header>
         <div class="settings-layout">
           <nav class="settings-tabs" role="tablist" aria-label="Categorias das definições" aria-orientation="vertical">
-            <button type="button" class="settings-tab is-active" id="settings-tab-general" role="tab" aria-selected="true" aria-controls="settings-panel-general" data-settings-tab="general"><span aria-hidden="true">⌂</span> Geral</button>
-            <button type="button" class="settings-tab" id="settings-tab-controls" role="tab" aria-selected="false" aria-controls="settings-panel-controls" data-settings-tab="controls" tabindex="-1"><span aria-hidden="true">⌖</span> Controlos</button>
-            <button type="button" class="settings-tab" id="settings-tab-appearance" role="tab" aria-selected="false" aria-controls="settings-panel-appearance" data-settings-tab="appearance" tabindex="-1"><span aria-hidden="true">✿</span> Aparência</button>
-            <button type="button" class="settings-tab" id="settings-tab-account" role="tab" aria-selected="false" aria-controls="settings-panel-account" data-settings-tab="account" tabindex="-1"><span aria-hidden="true">♡</span> Conta</button>
-            <button type="button" class="settings-tab" id="settings-tab-system" role="tab" aria-selected="false" aria-controls="settings-panel-system" data-settings-tab="system" tabindex="-1"><span aria-hidden="true">⚙</span> Sistema</button>
+            <button type="button" class="settings-tab is-active" id="settings-tab-general" role="tab" aria-selected="true" aria-controls="settings-panel-general" data-settings-tab="general"><span class="settings-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10L12 3L21 10V19A2 2 0 0 1 19 21H14V14H10V21H5A2 2 0 0 1 3 19V10Z"/></svg></span> Geral</button>
+            <button type="button" class="settings-tab" id="settings-tab-controls" role="tab" aria-selected="false" aria-controls="settings-panel-controls" data-settings-tab="controls" tabindex="-1"><span class="settings-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 8H17A4 4 0 0 1 20.9 11.1L21.7 15A2 2 0 0 1 18.4 17L15.5 14.5H8.5L5.6 17A2 2 0 0 1 2.3 15L3.1 11.1A4 4 0 0 1 7 8Z"/><path d="M7 10.5V13.5M5.5 12H8.5"/><circle cx="16.5" cy="11.5" r=".8"/><circle cx="18.5" cy="13.5" r=".8"/></svg></span> Controlos</button>
+            <button type="button" class="settings-tab" id="settings-tab-appearance" role="tab" aria-selected="false" aria-controls="settings-panel-appearance" data-settings-tab="appearance" tabindex="-1"><span class="settings-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="2.6"/><circle cx="12" cy="5.6" r="2.5"/><circle cx="17.5" cy="9.5" r="2.5"/><circle cx="15.4" cy="16" r="2.5"/><circle cx="8.6" cy="16" r="2.5"/><circle cx="6.5" cy="9.5" r="2.5"/></svg></span> Aparência</button>
+            <button type="button" class="settings-tab" id="settings-tab-account" role="tab" aria-selected="false" aria-controls="settings-panel-account" data-settings-tab="account" tabindex="-1"><span class="settings-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.3"/><path d="M5 21C5.7 17.4 8.2 15.5 12 15.5S18.3 17.4 19 21"/></svg></span> Conta</button>
+            <button type="button" class="settings-tab" id="settings-tab-system" role="tab" aria-selected="false" aria-controls="settings-panel-system" data-settings-tab="system" tabindex="-1"><span class="settings-tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8V5M12 19V21.2M2.8 12H5M19 12H21.2M5.5 5.5L7.1 7.1M16.9 16.9L18.5 18.5M18.5 5.5L16.9 7.1M7.1 16.9L5.5 18.5"/></svg></span> Sistema</button>
           </nav>
           <div class="settings-content">
             <div class="modal-body settings-form">
@@ -700,13 +711,13 @@
                   <p class="setting-help">A escolha é cosmética e não altera o progresso nem as interações.</p>
                   <fieldset class="theme-options" aria-describedby="theme-window-help">
                     <legend class="visually-hidden">Tema visual</legend>
-                    <label class="theme-option"><input type="radio" name="theme-preference" value="auto"><span class="theme-option-swatch theme-swatch-auto" aria-hidden="true"></span><span class="theme-option-copy"><strong>Automático</strong><small>Festival das Cores de 15 de junho a 15 de agosto; Outono Dourado de 15–23 de outubro e 8–20 de novembro; Halloween de 24 de outubro a 7 de novembro; Jardim dos Corações de 7 a 21 de fevereiro.</small></span></label>
-                    <label class="theme-option"><input type="radio" name="theme-preference" value="halloween"><span class="theme-option-swatch theme-swatch-halloween" aria-hidden="true"></span><span class="theme-option-copy"><strong>Halloween</strong><small>Ativa o tema sazonal em qualquer altura.</small></span></label>
-                    <label class="theme-option" id="theme-option-luminous"><input type="radio" name="theme-preference" value="luminous"><span class="theme-option-swatch theme-swatch-luminous" aria-hidden="true"></span><span class="theme-option-copy"><strong>Jardim Luminoso</strong><small id="theme-luminous-help">Desbloqueia ao atingir o nível 10.</small></span></label>
-                    <label class="theme-option"><input type="radio" name="theme-preference" value="jardim_coracoes"><span class="theme-option-swatch theme-swatch-hearts" aria-hidden="true"></span><span class="theme-option-copy"><strong>Jardim dos Corações</strong><small>Blush, sálvia e detalhes em ouro-rosa.</small></span></label>
-                    <label class="theme-option"><input type="radio" name="theme-preference" value="outono_dourado"><span class="theme-option-swatch theme-swatch-autumn" aria-hidden="true"></span><span class="theme-option-copy"><strong>Outono Dourado</strong><small>Ativa o tema de outono em qualquer altura.</small></span></label>
-                    <label class="theme-option"><input type="radio" name="theme-preference" value="festival_cores"><span class="theme-option-swatch theme-swatch-festival" aria-hidden="true"></span><span class="theme-option-copy"><strong>Festival das Cores</strong><small>Ativa o tema festivo em qualquer altura.</small></span></label>
-                    <label class="theme-option"><input type="radio" name="theme-preference" value="padrao_remaster"><span class="theme-option-swatch theme-swatch-padrao-remaster" aria-hidden="true"></span><span class="theme-option-copy"><strong>Padrão Remaster</strong><small>O jardim clássico renovado com orvalho, raios de sol e flores em destaque.</small></span></label>
+                    <label class="theme-option"><input type="radio" name="theme-preference" value="auto"><span class="theme-option-swatch theme-swatch-auto" aria-hidden="true"></span><span class="theme-option-copy"><strong>Automático</strong><small>Outono Dourado até 20 de dezembro; Natal Nevado de 21 de dezembro de 2026 a 2 de janeiro de 2027; Jardim dos Corações de 7 a 21 de fevereiro (nível 14); Festival das Cores de 15 de junho a 15 de agosto (nível 20).</small></span></label>
+                    <label class="theme-option"><input type="radio" name="theme-preference" value="natal_nevado"><span class="theme-option-swatch theme-swatch-natal" aria-hidden="true"></span><span class="theme-option-copy"><strong>Natal Nevado</strong><small>Fica ativo automaticamente até 2 de janeiro de 2027; também pode ser escolhido manualmente.</small></span></label>
+                    <label class="theme-option" id="theme-option-luminous"><input type="radio" name="theme-preference" value="luminous"><span class="theme-option-swatch theme-swatch-luminous" aria-hidden="true"></span><span class="theme-option-copy"><strong>Jardim Luminoso</strong><small id="theme-luminous-help">Desbloqueia ao atingir o nível 8.</small></span></label>
+                    <label class="theme-option"><input type="radio" name="theme-preference" value="jardim_coracoes"><span class="theme-option-swatch theme-swatch-hearts" aria-hidden="true"></span><span class="theme-option-copy"><strong>Jardim dos Corações</strong><small id="theme-hearts-help">Desbloqueia ao atingir o nível 14.</small></span></label>
+                    <label class="theme-option"><input type="radio" name="theme-preference" value="outono_dourado"><span class="theme-option-swatch theme-swatch-autumn" aria-hidden="true"></span><span class="theme-option-copy"><strong>Outono Dourado</strong><small>No Automático, fica ativo até 20 de dezembro; também pode ser escolhido manualmente.</small></span></label>
+                    <label class="theme-option"><input type="radio" name="theme-preference" value="festival_cores"><span class="theme-option-swatch theme-swatch-festival" aria-hidden="true"></span><span class="theme-option-copy"><strong>Festival das Cores</strong><small id="theme-festival-help">Desbloqueia ao atingir o nível 20.</small></span></label>
+                    <label class="theme-option" id="theme-option-padrao-remaster"><input type="radio" name="theme-preference" value="padrao_remaster"><span class="theme-option-swatch theme-swatch-padrao-remaster" aria-hidden="true"></span><span class="theme-option-copy"><strong>Padrão Remaster</strong><small>O jardim clássico renovado com orvalho, raios de sol e flores em destaque.</small></span></label>
                     <label class="theme-option"><input type="radio" name="theme-preference" value="classic"><span class="theme-option-swatch theme-swatch-classic" aria-hidden="true"></span><span class="theme-option-copy"><strong>Padrão</strong><small>Mantém o visual habitual durante todo o ano.</small></span></label>
                   </fieldset>
                   <p id="theme-window-help" class="setting-help">Automático ativa os temas de evento. Padrão repõe o visual habitual.</p>
@@ -721,17 +732,18 @@
               </section>
 
               <section class="settings-panel" id="settings-panel-account" role="tabpanel" aria-labelledby="settings-tab-account" data-settings-panel="account" hidden>
-                <div class="settings-panel-heading"><span class="settings-panel-icon" aria-hidden="true">♡</span><div><h3>Conta Light Group</h3><p>Sincroniza o progresso entre Web, Android e Windows.</p></div></div>
+                <div class="settings-panel-heading"><span class="settings-panel-icon" aria-hidden="true">♡</span><div><h3>Conta Light Group</h3><p>Desativado: a criação de contas e o início de sessão não estão disponíveis. O progresso continua guardado neste dispositivo.</p></div></div>
                 <div class="settings-card account-setting-item"><div id="account-settings-panel"></div></div>
               </section>
 
               <section class="settings-panel" id="settings-panel-system" role="tabpanel" aria-labelledby="settings-tab-system" data-settings-panel="system" hidden>
                 <div class="settings-panel-heading"><span class="settings-panel-icon" aria-hidden="true">⚙</span><div><h3>Sistema e ajuda</h3><p>Ajuda, detalhes da aplicação e ações de manutenção.</p></div></div>
                 <div id="native-display-setting" class="settings-card setting-item hidden"><label for="native-display-mode">Modo de ecrã</label><select id="native-display-mode" class="native-display-select"><option value="fullscreen">Tela Cheia</option><option value="borderless">Janela Cheia</option><option value="windowed">Janela</option></select><p class="setting-help">Escolhe como a aplicação ocupa o ecrã.</p></div>
+                <section id="developer-tools-panel" class="developer-tools-panel hidden" aria-labelledby="developer-tools-title"></section>
                 <section class="settings-card setting-item"><h4>Aprender a jogar</h4><p class="setting-help">Revê os controlos, as vendas, os menus e a progressão.</p><button type="button" id="btn-replay-tutorial" class="btn-secondary">Ver novamente</button></section>
                 <section class="settings-card setting-item"><h4>Apresentação FloristEver</h4><p class="setting-help">Revê o cinemático de entrada do jogo. Podes pular a apresentação a qualquer momento.</p><button type="button" id="btn-replay-floristever-cinematic" class="btn-secondary">Ver novamente</button></section>
                 <section class="settings-card setting-item"><h4>Apresentação do Subsolo</h4><p class="setting-help">Revê o cinemático do modo Subsolo. Podes pular a apresentação a qualquer momento.</p><button type="button" id="btn-replay-subsolo-cinematic" class="btn-secondary">Ver novamente</button></section>
-                <div class="settings-card info-block"><p><strong>FloristEver</strong> v2.6.0</p><p class="sub-credit">Obrigado por jogares FloristEver <img class="ui-icon inline-icon" src="imagens/favicon.svg" alt="" aria-hidden="true"></p><p class="powered-credit">Powered By Light Group</p></div>
+                <div class="settings-card info-block"><p><strong>FloristEver</strong> v3.0.0</p><p class="sub-credit">Obrigado por jogares FloristEver <img class="ui-icon inline-icon" src="imagens/favicon.svg" alt="" aria-hidden="true"></p><p class="powered-credit">Powered By Light Group</p></div>
                 <section id="subsolo-settings-section" class="settings-card setting-item hidden" aria-labelledby="subsolo-settings-title">
                   <h4 id="subsolo-settings-title">Conteúdo Secreto (Subsolo)</h4>
                   <p class="setting-help">Conteúdo temático opcional e fictício disponível a partir do nível 33.</p>
@@ -816,7 +828,8 @@
         <p id="onboarding-status" class="onboarding-status" role="status" aria-live="polite"></p>
 
         <div id="onboarding-entry-options" class="onboarding-entry-options">
-          <button type="button" id="btn-onboarding-account" class="btn-primary btn-large">Criar conta / Entrar</button>
+          <button type="button" id="btn-onboarding-account" class="btn-primary btn-large" disabled>Conta Light Group — Desativado</button>
+          <p class="onboarding-help account-disabled-help"><strong>Desativado:</strong> a criação de contas e o início de sessão não estão disponíveis. Podes jogar como convidado e usar o backup nas Definições.</p>
           <button type="button" id="btn-play-guest" class="btn-secondary btn-large">Jogar como convidado</button>
         </div>
         <section id="onboarding-account-section" class="onboarding-account-section hidden" aria-label="Conta Light Group">
@@ -973,7 +986,6 @@
   </section>
 
   <!-- Scripts do Jogo como Módulos ES -->
-  <script src="js/distribution-gate.js"></script>
   <script src="js/build-info.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>

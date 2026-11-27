@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { PALETTE } from './utils.js';
-import { HALLOWEEN_THEME } from './themes/halloween.js';
+import { NATAL_NEVADO_THEME } from './themes/natal-nevado-theme.js';
 import { LUMINOUS_GARDEN_THEME } from './themes/luminous-garden.js';
 import { HEARTS_GARDEN_THEME } from './themes/hearts-garden.js';
 import { GOLDEN_AUTUMN_THEME } from './themes/theme-outono-dourado.js';
@@ -10,9 +10,21 @@ import { PADRAO_REMASTER_THEME } from './themes/padrao-remaster-theme.js';
 export const EVENT_THEMES_ENABLED = true;
 export const PERMANENT_THEMES_ENABLED = true;
 export const LUMINOUS_GARDEN_UNLOCK_LEVEL = LUMINOUS_GARDEN_THEME.unlockLevel;
-export const THEME_PREFERENCES = Object.freeze(['auto', 'halloween', 'luminous', 'jardim_coracoes', 'outono_dourado', 'festival_cores', 'padrao_remaster', 'classic']);
+export function getThemeUnlockLevel(preference) {
+  return THEMES_BY_PREFERENCE.get(preference)?.unlockLevel || 0;
+}
+export const THEME_PREFERENCES = Object.freeze([
+  'auto',
+  'natal_nevado',
+  'luminous',
+  'jardim_coracoes',
+  'outono_dourado',
+  'festival_cores',
+  'padrao_remaster',
+  'classic'
+]);
 const THEMES_BY_PREFERENCE = new Map([
-  ['halloween', HALLOWEEN_THEME],
+  ['natal_nevado', NATAL_NEVADO_THEME],
   ['luminous', LUMINOUS_GARDEN_THEME],
   ['jardim_coracoes', HEARTS_GARDEN_THEME],
   ['outono_dourado', GOLDEN_AUTUMN_THEME],
@@ -39,7 +51,7 @@ function isRecurringWindowValid(window) {
   ) {
     return false;
   }
-  return startMonth * 100 + startDay <= endMonth * 100 + endDay;
+  return true;
 }
 
 function isWithinRecurringWindow(date, window) {
@@ -49,7 +61,52 @@ function isWithinRecurringWindow(date, window) {
   const [startMonth, startDay] = window.start.split('-').map(Number);
   const [endMonth, endDay] = window.end.split('-').map(Number);
   const current = month * 100 + day;
-  return current >= startMonth * 100 + startDay && current <= endMonth * 100 + endDay;
+  const start = startMonth * 100 + startDay;
+  const end = endMonth * 100 + endDay;
+  return start <= end
+    ? current >= start && current <= end
+    : current >= start || current <= end;
+}
+
+function isDateWindowValid(window) {
+  if (
+    !window
+    || typeof window !== 'object'
+    || typeof window.start !== 'string'
+    || typeof window.end !== 'string'
+    || !/^\d{4}-\d{2}-\d{2}$/.test(window.start)
+    || !/^\d{4}-\d{2}-\d{2}$/.test(window.end)
+  ) {
+    return false;
+  }
+  const isValidDate = (value) => {
+    const [year, month, day] = value.split('-').map(Number);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    return parsed.getUTCFullYear() === year
+      && parsed.getUTCMonth() === month - 1
+      && parsed.getUTCDate() === day;
+  };
+  return isValidDate(window.start) && isValidDate(window.end) && window.start <= window.end;
+}
+
+function isWithinDateWindow(date, window) {
+  if (!isDateWindowValid(window)) return false;
+  const current = [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0')
+  ].join('-');
+  return current >= window.start && current <= window.end;
+}
+
+function isWithinThemeWindow(date, theme) {
+  return theme.dateWindow
+    ? isWithinDateWindow(date, theme.dateWindow)
+    : isWithinRecurringWindow(date, theme.recurringWindow);
+}
+
+function isThemeUnlocked(theme, level) {
+  return !theme?.unlockLevel || level >= theme.unlockLevel;
 }
 
 export function resolveThemeId(
@@ -63,24 +120,33 @@ export function resolveThemeId(
   const selectedTheme = THEMES_BY_PREFERENCE.get(preference);
   if (selectedTheme && selectedTheme.type === 'permanent') {
     if (!permanentThemesEnabled) return 'classic';
-    if (preference === 'luminous' && level < LUMINOUS_GARDEN_UNLOCK_LEVEL) return 'classic';
+    if (!isThemeUnlocked(selectedTheme, level)) return 'classic';
     return selectedTheme.id;
   }
-  if (preference === 'halloween') return eventThemesEnabled ? HALLOWEEN_THEME.id : 'classic';
+  if (selectedTheme && selectedTheme.type === 'event') {
+    return eventThemesEnabled ? selectedTheme.id : 'classic';
+  }
   if (!eventThemesEnabled) return 'classic';
   if (preference !== 'auto') return 'classic';
 
-  const eventThemes = [HALLOWEEN_THEME, GOLDEN_AUTUMN_THEME, HEARTS_GARDEN_THEME, COLOR_FESTIVAL_THEME];
+  const eventThemes = [
+    GOLDEN_AUTUMN_THEME,
+    NATAL_NEVADO_THEME,
+    HEARTS_GARDEN_THEME,
+    COLOR_FESTIVAL_THEME
+  ];
   return eventThemes.find((theme) => (
     (theme.type !== 'permanent' || permanentThemesEnabled)
-    && isWithinRecurringWindow(date, theme.recurringWindow)
+    && isThemeUnlocked(theme, level)
+    && isWithinThemeWindow(date, theme)
   ))?.id || 'classic';
 }
 
 export function getThemePreference(settings, level = 0) {
   if (settings?.themePreference === undefined) return 'auto';
+  if (settings.themePreference === 'halloween') return 'auto';
   if (!THEME_PREFERENCES.includes(settings.themePreference)) return 'classic';
-  if (settings.themePreference === 'luminous' && level < LUMINOUS_GARDEN_UNLOCK_LEVEL) return 'classic';
+  if (!isThemeUnlocked(THEMES_BY_PREFERENCE.get(settings.themePreference), level)) return 'classic';
   return settings.themePreference;
 }
 
@@ -98,6 +164,7 @@ export function isThemeManifestValid(theme, expectedId, expectedType) {
     || typeof theme.cssTokens !== 'object'
     || Array.isArray(theme.cssTokens)
     || (theme.recurringWindow && !isRecurringWindowValid(theme.recurringWindow))
+    || (theme.dateWindow && !isDateWindowValid(theme.dateWindow))
     || (theme.hudIconMarkup && (
       typeof theme.hudIconMarkup !== 'object'
       || Array.isArray(theme.hudIconMarkup)
@@ -234,9 +301,9 @@ export class ThemeManager {
     this.updateHudIconography();
     const eventPill = document.getElementById('theme-event-pill');
     if (eventPill) {
-      const scheduledEventActive = Boolean(this.activeTheme?.recurringWindow)
+      const scheduledEventActive = Boolean(this.activeTheme?.recurringWindow || this.activeTheme?.dateWindow)
         && this.preference === 'auto'
-        && isWithinRecurringWindow(date, this.activeTheme.recurringWindow);
+        && isWithinThemeWindow(date, this.activeTheme);
       const showEventPill = this.activeTheme?.type === 'event' || scheduledEventActive;
       eventPill.hidden = !showEventPill;
       eventPill.classList.toggle('hidden', !showEventPill);
@@ -271,7 +338,7 @@ export class ThemeManager {
 
   setPreference(preference) {
     if (!THEME_PREFERENCES.includes(preference)) return false;
-    if (preference === 'luminous' && this.state.level < LUMINOUS_GARDEN_UNLOCK_LEVEL) return false;
+    if (!isThemeUnlocked(THEMES_BY_PREFERENCE.get(preference), this.state.level)) return false;
     const previous = this.state.settings.themePreference;
     this.state.settings.themePreference = preference;
     if (!this.state.save()) {

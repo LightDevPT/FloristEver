@@ -240,6 +240,7 @@ export const COLOR_FESTIVAL_THEME = Object.freeze({
   eventPillIconMarkup: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3C17 3 19 8 17.500 11.500C16.500 14 14 16 12 17.500C10 16 7.500 14 6.500 11.500C5 8 7 3 12 3Z" fill="#FF5FA2" stroke="#3A1F6B" stroke-width="1.600" stroke-linejoin="round"/><path d="M12 17.500L10.500 21H13.500L12 17.500Z" fill="#3A1F6B"/><path d="M9.500 7C10 6 11 5.500 11.500 5.500" stroke="#FFFFFF" stroke-width="1.400" stroke-linecap="round"/></svg>',
   type: 'permanent',
   paletteAppliesToWorld: true,
+  unlockLevel: 20,
   assetPalette: Object.freeze({
     cream: '#FFFBEF',
     grassLight: '#8FEA6A',

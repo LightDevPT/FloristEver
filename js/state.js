@@ -7,10 +7,16 @@ import { UPGRADES_CONFIG } from './config/upgrades.js';
 import { BOUQUET_CATEGORIES, calculateBouquetHarmony, SPECIAL_ORDERS, WRAPPERS } from './config/bouquets.js';
 import { CUSTOMER_CONFIG } from './config/customers.js';
 import { CURRENT_SAVE_SCHEMA_VERSION, migrateSaveData } from './save-migrations.mjs';
+import { createSaveBackupDocument, parseSaveBackupDocument } from './save-backup.js';
 import { createDefaultSubsoloState, SubsoloManager } from './subsolo/subsolo-state.js';
+import { SUBSOLO_PRODUCTS } from './subsolo/subsolo-config.js';
 
 const STORAGE_KEY = 'floristever_save_v1';
 const BACKUP_STORAGE_KEY = 'floristever_save_backup_v1';
+const AUTO_BACKUP_STORAGE_KEY = 'floristever_auto_backup_v1';
+const AUTO_BACKUP_ENABLED_KEY = 'floristever_auto_backup_enabled_v1';
+const AUTO_BACKUP_CREATED_AT_KEY = 'floristever_auto_backup_created_at_v1';
+const AUTO_BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const GAME_DAY_MS = 6 * 60 * 1000;
 const MAX_OFFLINE_MS = 8 * 60 * 60 * 1000;
 const CHALLENGE_CLAIM_GRACE_MS = 24 * 60 * 60 * 1000;
@@ -219,6 +225,7 @@ export class GameState {
       musicMuted: false,
       dayNightCycle: true,
       graphicsQuality: 'normal',
+      graphicsQualityMode: 'auto',
       themePreference: 'auto',
       themeReducedEffects: false,
       mobileControlLayout: 'left',
@@ -248,6 +255,7 @@ export class GameState {
     this.specialVisitors = [];
     this.zoneFindings = { greenhouse: [], 'night-garden': [] };
     this.gardenDecorations = {};
+    this.gardenBetaStatuePosition = null;
     this.orders = JSON.parse(JSON.stringify(SPECIAL_ORDERS));
     this.orderCycle = 1;
 
@@ -260,6 +268,8 @@ export class GameState {
       bouquetsCrafted: 0,
       flowersSold: 0
     };
+    this.appliedCampaignRewardIds = [];
+    this.lastBackupImportId = null;
     this.challengeCycles = this.createChallengeCycles(Date.now());
     this.challengeGrace = [];
 
@@ -673,6 +683,25 @@ export class GameState {
     return true;
   }
 
+  setGardenBetaStatuePosition(x, y) {
+    if (
+      !Number.isFinite(x)
+      || !Number.isFinite(y)
+      || x < 40
+      || x > 2260
+      || y < 40
+      || y > 1160
+    ) return false;
+    const original = this.gardenBetaStatuePosition;
+    this.gardenBetaStatuePosition = { x, y };
+    if (!this.save()) {
+      this.gardenBetaStatuePosition = original;
+      return false;
+    }
+    this.notify('garden_decoration_moved', { id: 'beta-statue', x, y });
+    return true;
+  }
+
   installHerbariumExhibition(exhibitionId) {
     const exhibition = this.getHerbariumExhibitions()
       .find((entry) => entry.id === exhibitionId);
@@ -900,6 +929,91 @@ export class GameState {
     this.coins -= amount;
     this.stats.totalCoinsSpent += amount;
     this.notify('coins_changed', { delta: -amount });
+    return true;
+  }
+
+  hasCampaignRewardApplied(claimId) {
+    if (typeof claimId !== 'string') return false;
+    if (this.appliedCampaignRewardIds.includes(claimId)) return true;
+    if (typeof localStorage === 'undefined') return false;
+    try {
+      const savedData = parseSaveData(localStorage.getItem(STORAGE_KEY));
+      const savedIds = savedData?.appliedCampaignRewardIds;
+      if (!Array.isArray(savedIds) || !savedIds.includes(claimId)) return false;
+      this.appliedCampaignRewardIds = [...new Set([...this.appliedCampaignRewardIds, ...savedIds])];
+      return true;
+    } catch (error) {
+      console.error('Não foi possível verificar se uma recompensa já foi aplicada:', error);
+      throw error;
+    }
+  }
+
+  applyCampaignReward(reward, claimId) {
+    if (
+      this.sessionOnlyMode
+      || this.saveBlocked
+      || typeof claimId !== 'string'
+      || !/^[A-Za-z0-9._-]{1,80}:[A-Za-z0-9._-]{1,80}$/.test(claimId)
+      || !reward
+      || !Number.isSafeInteger(reward.amount)
+      || reward.amount <= 0
+      || reward.amount > 1_000_000
+    ) return false;
+    if (this.hasCampaignRewardApplied(claimId)) return true;
+    if (this.appliedCampaignRewardIds.length >= 5000) return false;
+
+    const snapshot = {
+      coins: this.coins,
+      reputation: this.reputation,
+      level: this.level,
+      stock: { ...this.stock },
+      stats: { ...this.stats },
+      unlockedFlowers: { ...this.unlockedFlowers },
+      plots: JSON.parse(JSON.stringify(this.plots)),
+      subsolo: JSON.parse(JSON.stringify(this.subsolo)),
+      appliedCampaignRewardIds: [...this.appliedCampaignRewardIds]
+    };
+
+    if (reward.type === 'coins') {
+      this.addCoins(reward.amount);
+    } else if (reward.type === 'reputation') {
+      this.addReputation(reward.amount);
+    } else if (
+      reward.type === 'flower_stock'
+      && FLOWER_ORDER.includes(reward.flowerId)
+      && this.unlockedFlowers[reward.flowerId] === true
+      && Number.isFinite(Number(this.stock[reward.flowerId]))
+      && Number(this.stock[reward.flowerId]) + reward.amount <= this.getFlowerStockCapacity(reward.flowerId)
+    ) {
+      this.stock[reward.flowerId] = Number(this.stock[reward.flowerId]) + reward.amount;
+    } else if (
+      reward.type === 'subsolo_product'
+      && Object.prototype.hasOwnProperty.call(SUBSOLO_PRODUCTS, reward.productId)
+      && this.subsolo?.armazemOculto
+      && typeof this.subsolo.armazemOculto === 'object'
+    ) {
+      this.subsolo.armazemOculto[reward.productId] =
+        (Number(this.subsolo.armazemOculto[reward.productId]) || 0) + reward.amount;
+    } else {
+      return false;
+    }
+
+    this.appliedCampaignRewardIds.push(claimId);
+    if (!this.save()) {
+      this.coins = snapshot.coins;
+      this.reputation = snapshot.reputation;
+      this.level = snapshot.level;
+      this.stock = snapshot.stock;
+      this.stats = snapshot.stats;
+      this.unlockedFlowers = snapshot.unlockedFlowers;
+      this.plots = snapshot.plots;
+      this.subsolo = snapshot.subsolo;
+      this.subsoloManager = new SubsoloManager(this);
+      this.appliedCampaignRewardIds = snapshot.appliedCampaignRewardIds;
+      this.notify('state_loaded');
+      return false;
+    }
+    this.notify('campaign_reward_applied', { claimId, type: reward.type });
     return true;
   }
 
@@ -1359,10 +1473,13 @@ export class GameState {
       challengeCycles: this.challengeCycles,
       challengeGrace: this.challengeGrace,
       stats: this.stats,
+      appliedCampaignRewardIds: this.appliedCampaignRewardIds,
+      lastBackupImportId: this.lastBackupImportId,
       favoriteObjective: this.favoriteObjective,
       specialVisitors: this.specialVisitors,
       zoneFindings: this.zoneFindings,
       gardenDecorations: this.gardenDecorations,
+      gardenBetaStatuePosition: this.gardenBetaStatuePosition,
       tutorial: this.tutorial,
       plots: this.plots.map(p => ({
         id: p.id,
@@ -1393,11 +1510,124 @@ export class GameState {
         localStorage.setItem(BACKUP_STORAGE_KEY, currentSave);
       }
       localStorage.setItem(STORAGE_KEY, serialized);
+      this.maybeCreateAutomaticBackup(serialized);
       return true;
     } catch (e) {
       console.error('Não foi possível guardar o progresso; a cópia anterior foi preservada:', e);
       return false;
     }
+  }
+
+  isAutomaticBackupEnabled() {
+    try {
+      return localStorage.getItem(AUTO_BACKUP_ENABLED_KEY) === 'true';
+    } catch (error) {
+      console.error('Não foi possível verificar a preferência de backup automático:', error);
+      return false;
+    }
+  }
+
+  setAutomaticBackupEnabled(enabled) {
+    let previousPreference;
+    try {
+      previousPreference = localStorage.getItem(AUTO_BACKUP_ENABLED_KEY);
+      if (!enabled) {
+        localStorage.setItem(AUTO_BACKUP_ENABLED_KEY, 'false');
+        this.notify('automatic_backup_disabled');
+        return true;
+      }
+      if (this.sessionOnlyMode || this.saveBlocked || !this.save()) return false;
+
+      localStorage.setItem(AUTO_BACKUP_ENABLED_KEY, 'true');
+      if (!this.createAutomaticBackup({ force: true })) {
+        if (previousPreference === null) {
+          localStorage.removeItem(AUTO_BACKUP_ENABLED_KEY);
+        } else {
+          localStorage.setItem(AUTO_BACKUP_ENABLED_KEY, previousPreference);
+        }
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Não foi possível alterar a preferência de backup automático:', error);
+      try {
+        if (previousPreference === null) {
+          localStorage.removeItem(AUTO_BACKUP_ENABLED_KEY);
+        } else if (previousPreference !== undefined) {
+          localStorage.setItem(AUTO_BACKUP_ENABLED_KEY, previousPreference);
+        }
+      } catch (restoreError) {
+        console.error('Não foi possível restaurar a preferência anterior de backup:', restoreError);
+      }
+      return false;
+    }
+  }
+
+  getAutomaticBackup() {
+    const raw = localStorage.getItem(AUTO_BACKUP_STORAGE_KEY);
+    if (!raw) return null;
+    return parseSaveBackupDocument(raw, (data) => this.validateSaveData(data));
+  }
+
+  getRecoverySaveData() {
+    const raw = localStorage.getItem(BACKUP_STORAGE_KEY);
+    if (!raw) return null;
+    const saveData = parseSaveData(raw);
+    if (!saveData) return null;
+    const validatedSaveData = this.validateSaveData(saveData);
+    const savedAt = Number(validatedSaveData.lastSaveTime);
+    const savedAtDate = new Date(savedAt);
+    return {
+      saveData: validatedSaveData,
+      exportedAt: Number.isFinite(savedAt) && savedAtDate.getTime() > 0
+        ? savedAtDate.toISOString()
+        : null
+    };
+  }
+
+  validateSaveData(data) {
+    const migrated = migrateSaveData(data);
+    const serialized = JSON.stringify(migrated);
+    if (!parseSaveData(serialized)) {
+      throw new TypeError('O ficheiro não contém um save válido do FloristEver.');
+    }
+    return migrated;
+  }
+
+  createAutomaticBackup({ force = false, serializedSave } = {}) {
+    if (!this.isAutomaticBackupEnabled() || this.saveBlocked || this.sessionOnlyMode) return false;
+
+    try {
+      const now = Date.now();
+      const lastCreatedAt = Number(localStorage.getItem(AUTO_BACKUP_CREATED_AT_KEY));
+      if (
+        !force
+        && Number.isFinite(lastCreatedAt)
+        && lastCreatedAt > 0
+        && now >= lastCreatedAt
+        && now - lastCreatedAt < AUTO_BACKUP_INTERVAL_MS
+      ) {
+        return true;
+      }
+
+      const saveData = serializedSave
+        ? JSON.parse(serializedSave)
+        : this.exportSaveData();
+      const backup = createSaveBackupDocument(saveData, new Date(now).toISOString());
+      localStorage.setItem(AUTO_BACKUP_STORAGE_KEY, JSON.stringify(backup));
+      localStorage.setItem(AUTO_BACKUP_CREATED_AT_KEY, String(now));
+      this.notify('automatic_backup_saved', { exportedAt: backup.exportedAt });
+      return true;
+    } catch (error) {
+      console.error('Não foi possível criar o backup automático; a cópia anterior foi preservada:', error);
+      this.notify('automatic_backup_failed', { message: error.message });
+      return false;
+    }
+  }
+
+  maybeCreateAutomaticBackup(serializedSave) {
+    if (!this.isAutomaticBackupEnabled()) return;
+    this.createAutomaticBackup({ serializedSave });
   }
 
   load() {
@@ -1516,6 +1746,16 @@ export class GameState {
         this.orders = JSON.parse(JSON.stringify(SPECIAL_ORDERS));
       }
       if (data.stats) this.stats = { ...this.stats, ...data.stats };
+      this.appliedCampaignRewardIds = Array.isArray(data.appliedCampaignRewardIds)
+        ? [...new Set(data.appliedCampaignRewardIds.filter((id) => (
+            typeof id === 'string'
+            && /^[A-Za-z0-9._-]{1,80}:[A-Za-z0-9._-]{1,80}$/.test(id)
+          )))]
+        : [];
+      this.lastBackupImportId = typeof data.lastBackupImportId === 'string'
+        && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(data.lastBackupImportId)
+        ? data.lastBackupImportId
+        : null;
       const currentChallengePeriods = this.getChallengePeriodIds();
       this.challengeCycles = { ...this.createChallengeCycles(), ...(data.challengeCycles || {}) };
       const challengePools = { daily: DAILY_CHALLENGE_POOL, weekly: WEEKLY_CHALLENGE_POOL };
@@ -1626,6 +1866,17 @@ export class GameState {
           return [[index, { x: position.x, y: position.y }]];
         })
       );
+      const statuePosition = data.gardenBetaStatuePosition;
+      this.gardenBetaStatuePosition = (
+        Number.isFinite(statuePosition?.x)
+        && Number.isFinite(statuePosition?.y)
+        && statuePosition.x >= 40
+        && statuePosition.x <= 2260
+        && statuePosition.y >= 40
+        && statuePosition.y <= 1160
+      )
+        ? { x: statuePosition.x, y: statuePosition.y }
+        : null;
       if (data.economyVersion !== 2) {
         const legacyTotalEarned = Math.max(0, Number(data.stats?.totalCoinsEarned) || 0);
         this.stats.totalCoinsEarned = Math.max(0, legacyTotalEarned - 20);
@@ -1757,21 +2008,52 @@ export class GameState {
   }
 
   importSaveData(data) {
+    let previousSave;
+    let previousBackup;
+    let storageCaptured = false;
     try {
       const normalized = {
-        ...migrateSaveData(data),
+        ...this.validateSaveData(data),
         lastSaveTime: Date.now()
       };
       const serialized = JSON.stringify(normalized);
       if (!parseSaveData(serialized)) return null;
-      const currentSave = localStorage.getItem(STORAGE_KEY);
-      if (parseSaveData(currentSave)) {
-        localStorage.setItem(BACKUP_STORAGE_KEY, currentSave);
+      previousSave = localStorage.getItem(STORAGE_KEY);
+      previousBackup = localStorage.getItem(BACKUP_STORAGE_KEY);
+      storageCaptured = true;
+      if (parseSaveData(previousSave)) {
+        localStorage.setItem(BACKUP_STORAGE_KEY, previousSave);
       }
       localStorage.setItem(STORAGE_KEY, serialized);
-      return this.load();
+      const result = this.load();
+      if (!result || this.saveBlocked) {
+        throw new Error('O save importado não pôde ser carregado.');
+      }
+
+      const recoverySave = parseSaveData(previousSave)
+        ? previousSave
+        : parseSaveData(previousBackup) ? previousBackup : null;
+      if (recoverySave) localStorage.setItem(BACKUP_STORAGE_KEY, recoverySave);
+      return result;
     } catch (e) {
-      console.warn('Erro ao importar progresso da conta:', e);
+      if (storageCaptured) {
+        try {
+          if (previousSave === null) localStorage.removeItem(STORAGE_KEY);
+          else localStorage.setItem(STORAGE_KEY, previousSave);
+          if (previousBackup === null) localStorage.removeItem(BACKUP_STORAGE_KEY);
+          else localStorage.setItem(BACKUP_STORAGE_KEY, previousBackup);
+          if (parseSaveData(previousSave) || parseSaveData(previousBackup)) {
+            this.load();
+            if (previousBackup !== null) {
+              localStorage.setItem(BACKUP_STORAGE_KEY, previousBackup);
+            }
+          }
+        } catch (restoreError) {
+          this.saveBlocked = true;
+          console.error('Não foi possível restaurar o progresso anterior após falha na importação:', restoreError);
+        }
+      }
+      console.warn('Erro ao importar progresso do backup:', e);
       return null;
     }
   }
@@ -1856,6 +2138,8 @@ export class GameState {
   clearProgress() {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(BACKUP_STORAGE_KEY);
+    localStorage.removeItem(AUTO_BACKUP_STORAGE_KEY);
+    localStorage.removeItem(AUTO_BACKUP_CREATED_AT_KEY);
     this.resetToDefaults();
     this.notify('game_reset');
   }

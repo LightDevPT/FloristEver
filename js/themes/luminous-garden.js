@@ -114,7 +114,7 @@ export const LUMINOUS_GARDEN_THEME = Object.freeze({
   label: 'Jardim Luminoso',
   type: 'permanent',
   paletteAppliesToWorld: true,
-  unlockLevel: 10,
+  unlockLevel: 8,
   maxHalosActive: 12,
   haloPulsePeriodMs: PERIOD_MS,
   palette: Object.freeze({

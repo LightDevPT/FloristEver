@@ -123,6 +123,7 @@ export const HEARTS_GARDEN_THEME = Object.freeze({
   eventPillIconMarkup: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 20S3.5 15.2 3.5 9.2C3.5 5.2 8.4 3.8 12 8C15.6 3.8 20.5 5.2 20.5 9.2C20.5 15.2 12 20 12 20Z" fill="#E34B78" stroke="#69364C" stroke-width="1.6" stroke-linejoin="round"/></svg>',
   type: 'permanent',
   paletteAppliesToWorld: true,
+  unlockLevel: 14,
   assetPalette: Object.freeze({
     cream: '#FFF4EA',
     grassLight: '#B7E99E',
